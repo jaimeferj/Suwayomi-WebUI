@@ -412,6 +412,22 @@ msgstr "After changing this setting go to the \"About\" page and check for a web
 msgid "Age rating"
 msgstr "Age rating"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "AI"
+msgstr "AI"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "AI explanation"
+msgstr "AI explanation"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "AI is disabled. Configure it in the OCR settings panel."
+msgstr "AI is disabled. Configure it in the OCR settings panel."
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "AI request failed"
+msgstr "AI request failed"
+
 #: src/features/backup/Backup.utils.ts
 #: src/features/category/components/CategoriesInclusionSetting.tsx
 #: src/features/chapter/components/actions/ChaptersDownloadActionMenuItems.tsx
@@ -436,6 +452,14 @@ msgstr "Alpha"
 #: src/features/tracker/components/cards/TrackerActiveCard.tsx
 msgid "Also remove from {0}"
 msgstr "Also remove from {0}"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Anki"
+msgstr "Anki"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Anki endpoint"
+msgstr "Anki endpoint"
 
 #: src/features/settings/screens/Appearance.tsx
 #: src/features/settings/screens/Settings.tsx
@@ -725,6 +749,7 @@ msgstr "Can't migrate an entry to itself"
 #: src/features/category/components/CreateOrEditCategoryDialog.tsx
 #: src/features/migration/components/MigrationBulkSearchOptionsDialog.tsx
 #: src/features/migration/components/MigrationOptionsDialog.tsx
+#: src/features/ocr/AnkiCardDialog.tsx
 #: src/features/reader/hotkeys/settings/components/RecordHotkey.tsx
 #: src/features/settings/components/globalUpdate/GlobalUpdateSettingsEntries.tsx
 #: src/features/source/browse/components/SourceOptions.tsx
@@ -877,6 +902,8 @@ msgstr "Client data"
 #: src/base/components/feedback/SnackbarWithDescription.tsx
 #: src/features/app-updates/components/VersionUpdateInfoDialog.tsx
 #: src/features/migration/components/migration-entry/MigrationDestinationEntry.tsx
+#: src/features/ocr/AiExplainDialog.tsx
+#: src/features/ocr/OcrSettingsDialog.tsx
 msgid "Close"
 msgstr "Close"
 
@@ -1154,9 +1181,14 @@ msgstr "Could not validate backup"
 
 #: src/features/category/components/CategorySelect.tsx
 #: src/features/device/screens/DeviceSetting.tsx
+#: src/features/ocr/AnkiCardDialog.tsx
 #: src/features/reader/hotkeys/settings/components/RecordHotkey.tsx
 msgid "Create"
 msgstr "Create"
+
+#: src/features/ocr/AnkiCardDialog.tsx
+msgid "Create Anki card"
+msgstr "Create Anki card"
 
 #: src/features/backup/screens/Backup.tsx
 msgid "Create backup"
@@ -1260,6 +1292,10 @@ msgstr "Database url"
 msgid "Day"
 msgstr "Day"
 
+#: src/features/ocr/AnkiCardDialog.tsx
+msgid "Deck"
+msgstr "Deck"
+
 #: src/features/reader/hotkeys/settings/components/ReaderSettingHotkey.tsx
 msgid "Decrease auto scroll speed"
 msgstr "Decrease auto scroll speed"
@@ -1279,6 +1315,14 @@ msgstr "Default"
 #: src/features/category/components/CreateOrEditCategoryDialog.tsx
 msgid "Default category when adding new manga to the library"
 msgstr "Default category when adding new manga to the library"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Default deck"
+msgstr "Default deck"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Default model"
+msgstr "Default model"
 
 #: src/base/components/settings/MutableListSetting.tsx
 #: src/features/category/components/CategorySettingsCard.tsx
@@ -1527,13 +1571,29 @@ msgstr "Electron"
 msgid "Electron path"
 msgstr "Electron path"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Enable AI explanations"
+msgstr "Enable AI explanations"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Enable Anki card creation"
+msgstr "Enable Anki card creation"
+
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Enable debug logs"
 msgstr "Enable debug logs"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Enable OCR overlay"
+msgstr "Enable OCR overlay"
+
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Enable page read progress"
 msgstr "Enable page read progress"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Endpoint"
+msgstr "Endpoint"
 
 #: src/features/downloads/screens/DownloadSettings.tsx
 msgid "Entries in excluded categories will not be downloaded even if they are also in included categories"
@@ -1593,6 +1653,14 @@ msgstr "Exit to manga page"
 #: src/features/reader/viewer/components/ReaderTransitionPage.tsx
 msgid "Exit to previous page"
 msgstr "Exit to previous page"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Explanation"
+msgstr "Explanation"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Expression field"
+msgstr "Expression field"
 
 #: src/features/browse/screens/Browse.tsx
 msgid "Extension"
@@ -1793,6 +1861,10 @@ msgstr "Global update"
 msgid "Global update (last update: {date})"
 msgstr "Global update (last update: {date})"
 
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Grammar"
+msgstr "Grammar"
+
 #: src/features/reader/settings/general/components/ReaderSettingBackgroundColor.tsx
 msgid "Gray"
 msgstr "Gray"
@@ -1843,6 +1915,10 @@ msgstr "Hide entries already in library"
 #: src/features/history/screens/HistorySettings.tsx
 msgid "Hide history"
 msgstr "Hide history"
+
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "Hide overlay"
+msgstr "Hide overlay"
 
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Hikari connection pool"
@@ -2084,6 +2160,10 @@ msgstr "Keep remote"
 msgid "Keybinds"
 msgstr "Keybinds"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Keys are stored server-side in the learning service; nothing is exposed to the browser."
+msgstr "Keys are stored server-side in the learning service; nothing is exposed to the browser."
+
 #: src/features/reader/settings/layout/components/ReaderSettingTapZoneLayout.tsx
 msgid "Kindle"
 msgstr "Kindle"
@@ -2097,6 +2177,7 @@ msgid "L-Shape"
 msgstr "L-Shape"
 
 #: src/features/extension/info/components/Meta.tsx
+#: src/features/ocr/OcrSettingsDialog.tsx
 #: src/features/settings/screens/Appearance.tsx
 msgid "Language"
 msgstr "Language"
@@ -2164,6 +2245,10 @@ msgstr "Legacy"
 #: src/features/backup/screens/Backup.tsx
 msgid "legacy backups are not supported!"
 msgstr "legacy backups are not supported!"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Level"
+msgstr "Level"
 
 #: src/features/backup/Backup.constants.ts
 #: src/features/library/screens/Library.tsx
@@ -2303,6 +2388,10 @@ msgstr "Manhwa"
 msgid "Manual migration search for \"{title}\""
 msgstr "Manual migration search for \"{title}\""
 
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "Manual region mode"
+msgstr "Manual region mode"
+
 #: src/features/migration/components/migration-entry/MigrationDestinationEntry.tsx
 #: src/features/migration/components/migration-entry/MigrationEntry.tsx
 #: src/features/migration/components/migration-entry/MigrationEntrySearchExcludeActions.tsx
@@ -2356,6 +2445,10 @@ msgstr "Maximum log file size"
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Maximum size of all log files"
 msgstr "Maximum size of all log files"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Meaning field"
+msgstr "Meaning field"
 
 #: src/features/reader/settings/behaviour/components/ReaderSettingScrollAmount.tsx
 msgid "Medium"
@@ -2444,6 +2537,10 @@ msgstr "Missing: {0}"
 #: src/features/reader/overlay/settings/ReaderSettingOverlayMode.tsx
 msgid "Mobile"
 msgstr "Mobile"
+
+#: src/features/ocr/AnkiCardDialog.tsx
+msgid "Model"
+msgstr "Model"
 
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Modern"
@@ -2543,6 +2640,10 @@ msgstr "No sources found. Install Some extensions first."
 msgid "No sources installed"
 msgstr "No sources installed"
 
+#: src/features/reader/overlay/ocr/OcrRegionSelector.tsx
+msgid "No text recognised"
+msgstr "No text recognised"
+
 #: src/features/backup/Backup.utils.ts
 #: src/features/category/components/CategoriesInclusionSetting.tsx
 #: src/features/downloads/screens/DownloadSettings.tsx
@@ -2588,6 +2689,14 @@ msgstr "Obsolete"
 #: src/features/reader/overlay/ocr/OcrOverlay.tsx
 msgid "OCR error"
 msgstr "OCR error"
+
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "OCR menu"
+msgstr "OCR menu"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "OCR settings"
+msgstr "OCR settings"
 
 #: src/features/tracker/Tracker.constants.ts
 msgid "OEL"
@@ -2802,6 +2911,10 @@ msgstr "Progress bar style"
 msgid "Prompt"
 msgstr "Prompt"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Provider"
+msgstr "Provider"
+
 #: src/features/manga/Manga.constants.ts
 msgid "Publishing finished"
 msgstr "Publishing finished"
@@ -2841,6 +2954,10 @@ msgstr "Reader width"
 msgid "Reading direction"
 msgstr "Reading direction"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Reading field (optional)"
+msgstr "Reading field (optional)"
+
 #: src/features/reader/overlay/navigation/desktop/quick-settings/components/ReaderNavBarDesktopReadingMode.tsx
 #: src/features/reader/settings/layout/components/ReaderSettingReadingMode.tsx
 msgid "Reading mode"
@@ -2874,6 +2991,10 @@ msgstr "Recorded hotkeys: {0}"
 #: src/features/reader/filters/settings/components/ReaderSettingRGBA.tsx
 msgid "Red"
 msgstr "Red"
+
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "Redo OCR for current page"
+msgstr "Redo OCR for current page"
 
 #: src/features/app-updates/components/WebUIUpdateChecker.tsx
 msgid "Refresh"
@@ -2945,6 +3066,10 @@ msgstr "Reset"
 msgid "Reset to Default"
 msgstr "Reset to Default"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Reset to defaults"
+msgstr "Reset to defaults"
+
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Response fallback"
 msgstr "Response fallback"
@@ -2976,6 +3101,10 @@ msgstr "Retry"
 #: src/features/reader/overlay/navigation/desktop/components/ReaderNavBarDesktopActions.tsx
 msgid "Retry errored pages"
 msgstr "Retry errored pages"
+
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Reveal text only on hover"
+msgstr "Reveal text only on hover"
 
 #: src/features/reader/overlay/progress-bar/settings/components/ReaderSettingProgressBarPosition.tsx
 #: src/features/reader/settings/general/components/ReaderSettingSafeAreaInset.tsx
@@ -3200,6 +3329,10 @@ msgstr "Server version {0} ({1}) available for download"
 msgid "Server was updated to version {version} ({0})"
 msgstr "Server was updated to version {version} ({0})"
 
+#: src/features/ocr/OcrSettingsDialog.tsx
+msgid "Service"
+msgstr "Service"
+
 #: src/features/theme/components/CreateThemeDialog.tsx
 msgid "Set as active theme"
 msgstr "Set as active theme"
@@ -3230,6 +3363,10 @@ msgstr "Setting can not be changed while the reader is opened"
 #: src/features/source/components/SourceLanguageSelect.tsx
 msgid "Settings"
 msgstr "Settings"
+
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "Settings…"
+msgstr "Settings…"
 
 #: src/features/reader/overlay/mobile/ReaderOverlayHeaderMobile.tsx
 msgid "Share"
@@ -3285,6 +3422,10 @@ msgstr "Show only downloaded chapters"
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Show only unread chapters"
 msgstr "Show only unread chapters"
+
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "Show overlay"
+msgstr "Show overlay"
 
 #: src/features/reader/settings/general/ReaderGeneralSettings.tsx
 msgid "Show page number"
@@ -3516,6 +3657,10 @@ msgstr "System"
 msgid "Tabs"
 msgstr "Tabs"
 
+#: src/features/ocr/AnkiCardDialog.tsx
+msgid "Tags (comma-separated)"
+msgstr "Tags (comma-separated)"
+
 #: src/features/reader/settings/layout/components/ReaderSettingTapZoneLayout.tsx
 msgid "Tap zones"
 msgstr "Tap zones"
@@ -3673,7 +3818,6 @@ msgid "Toggle menu"
 msgstr "Toggle menu"
 
 #: src/features/reader/hotkeys/settings/components/ReaderSettingHotkey.tsx
-#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
 msgid "Toggle OCR overlay"
 msgstr "Toggle OCR overlay"
 
@@ -3946,6 +4090,10 @@ msgstr "Version"
 #: src/features/reader/settings/layout/components/ReaderSettingTapZoneInvertMode.tsx
 msgid "Vertical"
 msgstr "Vertical"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Vocabulary"
+msgstr "Vocabulary"
 
 #: src/features/settings/Settings.constants.ts
 msgid "VUI"

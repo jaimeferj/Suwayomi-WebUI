@@ -24,6 +24,7 @@ import { ReaderChapterList } from '@/features/reader/overlay/navigation/componen
 import { ReaderBottomBarMobileQuickSettings } from '@/features/reader/overlay/navigation/mobile/quick-settings/ReaderBottomBarMobileQuickSettings.tsx';
 import { useResizeObserver } from '@/base/hooks/useResizeObserver.tsx';
 import { useReaderChaptersStore, useReaderScrollbarStore } from '@/features/reader/stores/ReaderStore.ts';
+import { ReaderOcrButton } from '@/features/reader/overlay/navigation/components/ReaderOcrButton.tsx';
 
 const BaseReaderBottomBarMobile = ({
     openSettings,
@@ -89,6 +90,7 @@ const BaseReaderBottomBarMobile = ({
                                     <FormatListBulletedIcon />
                                 </IconButton>
                             </CustomTooltip>
+                            <ReaderOcrButton />
                             <CustomTooltip title={t`Quick settings`}>
                                 <IconButton {...bindTrigger(quickSettingsPopupState)} color="inherit">
                                     <AppSettingsAltIcon />

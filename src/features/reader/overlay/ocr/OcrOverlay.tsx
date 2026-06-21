@@ -6,11 +6,13 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import { memo, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { useLingui } from '@lingui/react/macro';
-import { useReaderOcrStore } from '@/features/reader/stores/ReaderStore.ts';
+import { useReaderChaptersStore, useReaderOcrStore, useReaderStore } from '@/features/reader/stores/ReaderStore.ts';
 import { OcrTextBox } from '@/features/ocr/OcrTextBox.tsx';
+import { AnkiCardDialog } from '@/features/ocr/AnkiCardDialog.tsx';
+import { AiExplainDialog } from '@/features/ocr/AiExplainDialog.tsx';
 import { useOcrStore, pageKey } from '@/features/ocr/OcrStore.ts';
 import { bboxKey } from '@/features/ocr/BBox.utils.ts';
 import type { OcrLine } from '@/features/ocr/Ocr.types.ts';
@@ -21,9 +23,10 @@ export interface OcrOverlayProps {
     pageIndex: number;
     pageUrl: string;
     imageRef: HTMLElement | null;
+    inViewport?: boolean;
 }
 
-const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef }: OcrOverlayProps) => {
+const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inViewport = true }: OcrOverlayProps) => {
     const { t } = useLingui();
     const isVisible = useReaderOcrStore((state) => state.isVisible);
     const redoKey = useReaderOcrStore((state) => state.redoPageKey);
@@ -36,11 +39,20 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef }: Oc
     const pageState = useOcrStore((state) => state.pages[key]);
     const lines: OcrLine[] | undefined = pageState?.result?.lines;
 
-    const enabled = isVisible && settings.enabled;
+    const overlayActive = isVisible && settings.enabled;
+    const fetchEnabled = overlayActive && inViewport;
     const lastRedoKey = useRef(redoKey);
 
+    const { currentChapter } = useReaderChaptersStore();
+    const { manga } = useReaderStore();
+    const mangaTitle = manga?.title;
+    const chapterTitle = currentChapter?.name;
+
+    const [ankiLine, setAnkiLine] = useState<OcrLine | null>(null);
+    const [explainLine, setExplainLine] = useState<OcrLine | null>(null);
+
     useEffect(() => {
-        if (!enabled) {
+        if (!fetchEnabled) {
             return;
         }
         if (lastRedoKey.current !== redoKey) {
@@ -69,7 +81,7 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef }: Oc
             void ensurePage(key, loader);
         }
     }, [
-        enabled,
+        fetchEnabled,
         key,
         pageState?.status,
         redoKey,
@@ -83,39 +95,73 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef }: Oc
         redoPage,
     ]);
 
-    if (!enabled || !imageRef) {
-        return null;
+    const handleAnkiClose = useCallback(() => setAnkiLine(null), []);
+    const handleExplainClose = useCallback(() => setExplainLine(null), []);
+
+    if (!overlayActive || !imageRef) {
+        return (
+            <>
+                <AnkiCardDialog
+                    open={false}
+                    onClose={handleAnkiClose}
+                    initialText=""
+                    mangaTitle={mangaTitle}
+                    chapterTitle={chapterTitle}
+                    pageIndex={pageIndex}
+                />
+                <AiExplainDialog open={false} text="" onClose={handleExplainClose} />
+            </>
+        );
     }
 
     const rect = imageRef.getBoundingClientRect();
 
     return (
-        <Box
-            sx={{
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-                zIndex: 2,
-            }}
-            data-ocr-overlay=""
-        >
-            {(lines ?? []).map((line) => (
-                <OcrTextBox
-                    key={`${key}-${bboxKey(line.tightBoundingBox)}`}
-                    line={line}
-                    containerWidth={rect.width}
-                    containerHeight={rect.height}
-                />
-            ))}
-            {pageState?.status === 'loading' && (
-                <Box sx={{ position: 'absolute', top: 8, right: 8, color: 'common.white' }}>{t`Recognising text…`}</Box>
-            )}
-            {pageState?.status === 'error' && (
-                <Box sx={{ position: 'absolute', top: 8, right: 8, color: 'error.main' }}>
-                    {pageState.error ?? t`OCR error`}
-                </Box>
-            )}
-        </Box>
+        <>
+            <Box
+                sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                }}
+                data-ocr-overlay=""
+                data-in-viewport={inViewport ? 'true' : 'false'}
+            >
+                {(lines ?? []).map((line) => (
+                    <OcrTextBox
+                        key={`${key}-${bboxKey(line.tightBoundingBox)}`}
+                        line={line}
+                        containerWidth={rect.width}
+                        containerHeight={rect.height}
+                        showOnHover={settings.showOnHover}
+                        ankiEnabled={settings.ankiEnabled}
+                        aiEnabled={settings.aiEnabled}
+                        onCreateAnkiCard={settings.ankiEnabled ? () => setAnkiLine(line) : undefined}
+                        onExplain={settings.aiEnabled ? () => setExplainLine(line) : undefined}
+                    />
+                ))}
+                {pageState?.status === 'loading' && (
+                    <Box
+                        sx={{ position: 'absolute', top: 8, right: 8, color: 'common.white' }}
+                    >{t`Recognising text…`}</Box>
+                )}
+                {pageState?.status === 'error' && (
+                    <Box sx={{ position: 'absolute', top: 8, right: 8, color: 'error.main' }}>
+                        {pageState.error ?? t`OCR error`}
+                    </Box>
+                )}
+            </Box>
+            <AnkiCardDialog
+                open={ankiLine !== null}
+                onClose={handleAnkiClose}
+                initialText={ankiLine?.text ?? ''}
+                mangaTitle={mangaTitle}
+                chapterTitle={chapterTitle}
+                pageIndex={pageIndex}
+            />
+            <AiExplainDialog open={explainLine !== null} text={explainLine?.text ?? ''} onClose={handleExplainClose} />
+        </>
     );
 };
 

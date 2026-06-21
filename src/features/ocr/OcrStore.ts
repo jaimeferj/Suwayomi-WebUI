@@ -9,6 +9,8 @@
 import { create } from 'zustand';
 
 import { OcrApi } from '@/features/ocr/OcrApi';
+import { AnkiApi } from '@/features/ocr/AnkiApi';
+import { AiApi } from '@/features/ocr/AiApi';
 import type { OcrLine, OcrPageResult, OcrRegionResult, OcrSettings, OcrStatus } from '@/features/ocr/Ocr.types';
 
 export type PageKey = string;
@@ -28,6 +30,8 @@ export interface OcrRegionState {
 export interface OcrStoreState {
     settings: OcrSettings;
     api: OcrApi;
+    ankiApi: AnkiApi;
+    aiApi: AiApi;
     status?: OcrStatus;
     pages: Record<PageKey, OcrPageState>;
     regions: Record<string, OcrRegionState>;
@@ -48,20 +52,39 @@ export const DEFAULT_SETTINGS: OcrSettings = {
     language: 'ja',
     showOnHover: true,
     autoDetect: true,
+    ankiEnabled: false,
+    ankiEndpoint: 'http://127.0.0.1:8765',
+    ankiDefaultDeck: 'Mining',
+    ankiDefaultModel: 'Basic',
+    ankiFieldExpression: 'Front',
+    ankiFieldReading: '',
+    ankiFieldMeaning: 'Back',
+    aiEnabled: false,
+    aiProvider: 'openai',
+    aiLevel: 'intermediate',
 };
 
 export const useOcrStore = create<OcrStoreState>((set, get) => {
     const initialSettings: OcrSettings = { ...DEFAULT_SETTINGS };
     const api = new OcrApi({ endpoint: initialSettings.endpoint });
+    const ankiApi = new AnkiApi({ endpoint: initialSettings.ankiEndpoint });
+    const aiApi = new AiApi({ endpoint: initialSettings.endpoint });
 
     return {
         settings: initialSettings,
         api,
+        ankiApi,
+        aiApi,
         pages: {},
         regions: {},
         setSettings: (patch) => {
             const merged = { ...get().settings, ...patch };
-            set({ settings: merged, api: new OcrApi({ endpoint: merged.endpoint }) });
+            set({
+                settings: merged,
+                api: new OcrApi({ endpoint: merged.endpoint }),
+                ankiApi: new AnkiApi({ endpoint: merged.ankiEndpoint }),
+                aiApi: new AiApi({ endpoint: merged.endpoint }),
+            });
         },
         refreshStatus: async () => {
             try {

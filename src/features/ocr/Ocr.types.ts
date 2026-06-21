@@ -71,4 +71,14 @@ export interface OcrSettings {
     language: string;
     showOnHover: boolean;
     autoDetect: boolean;
+    ankiEnabled: boolean;
+    ankiEndpoint: string;
+    ankiDefaultDeck: string;
+    ankiDefaultModel: string;
+    ankiFieldExpression: string;
+    ankiFieldReading: string;
+    ankiFieldMeaning: string;
+    aiEnabled: boolean;
+    aiProvider: string;
+    aiLevel: string;
 }

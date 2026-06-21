@@ -8,18 +8,35 @@
 
 import { memo, useCallback, useState } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
-import type { OcrLine } from '@/features/ocr/Ocr.types.ts';
-import { getOcrTextLayout } from '@/features/ocr/OcrLayout.ts';
+import type { OcrLine } from '@/features/ocr/Ocr.types';
+import { getOcrTextLayout } from '@/features/ocr/OcrLayout';
 
 export interface OcrTextBoxProps {
     line: OcrLine;
     containerWidth: number;
     containerHeight: number;
+    showOnHover: boolean;
+    ankiEnabled: boolean;
+    aiEnabled: boolean;
+    onCreateAnkiCard?: () => void;
+    onExplain?: () => void;
 }
 
-const OcrTextBoxBase = ({ line, containerWidth, containerHeight }: OcrTextBoxProps) => {
+const OcrTextBoxBase = ({
+    line,
+    containerWidth,
+    containerHeight,
+    showOnHover,
+    ankiEnabled,
+    aiEnabled,
+    onCreateAnkiCard,
+    onExplain,
+}: OcrTextBoxProps) => {
     const [hovered, setHovered] = useState(false);
+    const revealed = showOnHover ? hovered : true;
 
     const handleCopy = useCallback(() => {
         if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -41,7 +58,6 @@ const OcrTextBoxBase = ({ line, containerWidth, containerHeight }: OcrTextBoxPro
             <Box
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
-                onClick={handleCopy}
                 sx={{
                     position: 'absolute',
                     left: `${line.tightBoundingBox.x * 100}%`,
@@ -51,10 +67,9 @@ const OcrTextBoxBase = ({ line, containerWidth, containerHeight }: OcrTextBoxPro
                     writingMode: layout.orientation === 'vertical' ? 'vertical-rl' : 'horizontal-tb',
                     fontSize: `${layout.fontSize}px`,
                     lineHeight: 1,
-                    color: hovered ? 'common.white' : 'transparent',
-                    backgroundColor: hovered ? 'rgba(0,0,0,0.6)' : 'transparent',
-                    border: hovered ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
-                    cursor: 'pointer',
+                    color: revealed ? 'common.white' : 'transparent',
+                    backgroundColor: revealed ? 'rgba(0,0,0,0.6)' : 'transparent',
+                    border: revealed ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
                     pointerEvents: 'auto',
                     display: 'flex',
                     alignItems: 'center',
@@ -66,6 +81,32 @@ const OcrTextBoxBase = ({ line, containerWidth, containerHeight }: OcrTextBoxPro
                 data-ocr-text=""
             >
                 {line.text}
+                {hovered && (
+                    <ButtonGroup
+                        size="small"
+                        variant="contained"
+                        sx={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            transform: layout.orientation === 'vertical' ? 'rotate(90deg)' : 'none',
+                            transformOrigin: 'top right',
+                            zIndex: 1,
+                        }}
+                    >
+                        <Button onClick={handleCopy}>Copy</Button>
+                        {ankiEnabled && (
+                            <Button onClick={onCreateAnkiCard} disabled={!onCreateAnkiCard}>
+                                Anki
+                            </Button>
+                        )}
+                        {aiEnabled && (
+                            <Button onClick={onExplain} disabled={!onExplain}>
+                                Explain
+                            </Button>
+                        )}
+                    </ButtonGroup>
+                )}
             </Box>
         </Tooltip>
     );
