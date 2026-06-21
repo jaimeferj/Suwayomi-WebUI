@@ -363,6 +363,9 @@ export const APP_METADATA: Record<
     shouldShowTransitionPage: {
         convert: convertToBoolean,
     },
+    shouldShowOcrOverlay: {
+        convert: convertToBoolean,
+    },
     appTheme: {
         convert: convertToString,
     },

@@ -2585,6 +2585,10 @@ msgstr "Number of unread chapters to download"
 msgid "Obsolete"
 msgstr "Obsolete"
 
+#: src/features/reader/overlay/ocr/OcrOverlay.tsx
+msgid "OCR error"
+msgstr "OCR error"
+
 #: src/features/tracker/Tracker.constants.ts
 msgid "OEL"
 msgstr "OEL"
@@ -2849,6 +2853,14 @@ msgstr "Recently added"
 #: src/features/library/components/LibraryOptionsPanel.tsx
 msgid "Recently read"
 msgstr "Recently read"
+
+#: src/features/reader/settings/behaviour/ReaderBehaviourSettings.tsx
+msgid "Recognise Japanese text on each page via the manga-learning service and show an overlay on hover."
+msgstr "Recognise Japanese text on each page via the manga-learning service and show an overlay on hover."
+
+#: src/features/reader/overlay/ocr/OcrOverlay.tsx
+msgid "Recognising text…"
+msgstr "Recognising text…"
 
 #: src/features/reader/hotkeys/settings/components/RecordHotkey.tsx
 msgid "Record keybind"
@@ -3262,6 +3274,10 @@ msgstr "Show more"
 msgid "Show number of items"
 msgstr "Show number of items"
 
+#: src/features/reader/settings/behaviour/ReaderBehaviourSettings.tsx
+msgid "Show OCR overlay"
+msgstr "Show OCR overlay"
+
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Show only downloaded chapters"
 msgstr "Show only downloaded chapters"
@@ -3655,6 +3671,11 @@ msgstr "Toggle auto scroll"
 #: src/features/reader/hotkeys/settings/components/ReaderSettingHotkey.tsx
 msgid "Toggle menu"
 msgstr "Toggle menu"
+
+#: src/features/reader/hotkeys/settings/components/ReaderSettingHotkey.tsx
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "Toggle OCR overlay"
+msgstr "Toggle OCR overlay"
 
 #: src/features/reader/hotkeys/settings/components/ReaderSettingHotkey.tsx
 msgid "Toggle offset double spreads"

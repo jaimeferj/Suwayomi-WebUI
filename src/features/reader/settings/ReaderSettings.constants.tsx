@@ -156,6 +156,7 @@ const GLOBAL_READER_SETTING_OBJECT: Record<keyof IReaderSettingsGlobal, undefine
     shouldUseInfiniteScroll: undefined,
     shouldShowTransitionPage: undefined,
     safeAreaInset: undefined,
+    shouldShowOcrOverlay: undefined,
 };
 
 export const GLOBAL_READER_SETTING_KEYS = Object.keys(GLOBAL_READER_SETTING_OBJECT);
@@ -229,6 +230,7 @@ export const DEFAULT_READER_SETTINGS: IReaderSettings = {
         [ReaderHotkey.AUTO_SCROLL_SPEED_INCREASE]: ['b'],
         [ReaderHotkey.AUTO_SCROLL_SPEED_DECREASE]: ['v'],
         [ReaderHotkey.EXIT_READER]: ['c'],
+        [ReaderHotkey.TOGGLE_OCR_OVERLAY]: ['u'],
     },
     imagePreLoadAmount: IMAGE_PRE_LOAD_AMOUNT.default,
     shouldUseAutoWebtoonMode: true,
@@ -243,6 +245,7 @@ export const DEFAULT_READER_SETTINGS: IReaderSettings = {
     scrollAmount: ReaderScrollAmount.LARGE,
     shouldUseInfiniteScroll: true,
     shouldShowTransitionPage: true,
+    shouldShowOcrOverlay: false,
     safeAreaInset: {
         top: true,
         right: true,

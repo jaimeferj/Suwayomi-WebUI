@@ -18,6 +18,7 @@ import { Chapters } from '@/features/chapter/services/Chapters.ts';
 import { DownloadStateIndicator } from '@/base/components/downloads/DownloadStateIndicator.tsx';
 import { ReaderLibraryButton } from '@/features/reader/overlay/navigation/components/ReaderLibraryButton.tsx';
 import { ReaderBookmarkButton } from '@/features/reader/overlay/navigation/components/ReaderBookmarkButton.tsx';
+import { ReaderOcrButton } from '@/features/reader/overlay/navigation/components/ReaderOcrButton.tsx';
 import { CHAPTER_ACTION_TO_TRANSLATION, FALLBACK_CHAPTER } from '@/features/chapter/Chapter.constants.ts';
 import { IconBrowser } from '@/assets/icons/IconBrowser.tsx';
 import { IconWebView } from '@/assets/icons/IconWebView.tsx';
@@ -85,6 +86,7 @@ export const ReaderNavBarDesktopActions = memo(() => {
         <Stack sx={{ flexDirection: 'row', justifyContent: 'center', gap: 1 }}>
             <ReaderLibraryButton />
             <ReaderBookmarkButton id={id} isBookmarked={isBookmarked} />
+            <ReaderOcrButton />
             <CustomTooltip title={t`Retry errored pages`} disabled={!haveSomePagesFailedToLoad}>
                 <IconButton
                     onClick={() => {

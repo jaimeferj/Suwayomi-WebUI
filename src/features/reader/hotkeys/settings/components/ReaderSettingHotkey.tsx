@@ -38,6 +38,7 @@ const READER_HOTKEY_TO_TITLE: Record<ReaderHotkey, MessageDescriptor> = {
     [ReaderHotkey.AUTO_SCROLL_SPEED_INCREASE]: msg`Increase auto scroll speed`,
     [ReaderHotkey.AUTO_SCROLL_SPEED_DECREASE]: msg`Decrease auto scroll speed`,
     [ReaderHotkey.EXIT_READER]: msg`Exit reader`,
+    [ReaderHotkey.TOGGLE_OCR_OVERLAY]: msg`Toggle OCR overlay`,
 };
 
 export const ReaderSettingHotkey = ({

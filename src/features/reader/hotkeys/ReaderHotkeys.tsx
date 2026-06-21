@@ -25,6 +25,7 @@ import { ScrollOffset } from '@/base/Base.types.ts';
 import { getOptionForDirection } from '@/features/theme/services/ThemeCreator.ts';
 import {
     getReaderAutoScrollStore,
+    getReaderOcrStore,
     getReaderOverlayStore,
     getReaderSettingsStore,
     useReaderSettingsStore,
@@ -179,6 +180,7 @@ export const ReaderHotkeys = ({
         }),
     );
     useHotkeys(hotkeys[ReaderHotkey.EXIT_READER], exitReader, [exitReader]);
+    useHotkeys(hotkeys[ReaderHotkey.TOGGLE_OCR_OVERLAY], () => getReaderOcrStore().toggleIsVisible());
 
     useEffect(() => {
         enableScope(HotkeyScope.READER);

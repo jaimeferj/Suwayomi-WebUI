@@ -127,6 +127,18 @@ export const ReaderBehaviourSettings = ({
                 onChange={(_, checked) => updateSetting('shouldShowTransitionPage', checked)}
             />
             <CheckboxInput
+                label={
+                    <Box>
+                        <Typography>{t`Show OCR overlay`}</Typography>
+                        <Typography variant="body2" color="textDisabled">
+                            {t`Recognise Japanese text on each page via the manga-learning service and show an overlay on hover.`}
+                        </Typography>
+                    </Box>
+                }
+                checked={settings.shouldShowOcrOverlay}
+                onChange={(_, checked) => updateSetting('shouldShowOcrOverlay', checked)}
+            />
+            <CheckboxInput
                 label={t`Inform about missing chapters on chapter transition`}
                 checked={settings.shouldInformAboutMissingChapter}
                 onChange={(_, checked) => updateSetting('shouldInformAboutMissingChapter', checked)}

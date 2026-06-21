@@ -177,6 +177,7 @@ export interface IReaderSettingsGlobal {
     shouldUseInfiniteScroll: boolean;
     shouldShowTransitionPage: boolean;
     safeAreaInset: SafeAreaInset;
+    shouldShowOcrOverlay: boolean;
 }
 
 export interface IReaderSettingsManga {
@@ -284,6 +285,7 @@ export enum ReaderHotkey {
     AUTO_SCROLL_SPEED_INCREASE,
     AUTO_SCROLL_SPEED_DECREASE,
     EXIT_READER,
+    TOGGLE_OCR_OVERLAY,
 }
 
 interface SinglePageData {

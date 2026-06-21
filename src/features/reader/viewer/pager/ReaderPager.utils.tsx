@@ -24,7 +24,8 @@ import {
     shouldApplyReaderWidth,
 } from '@/features/reader/settings/ReaderSettings.utils.tsx';
 import { requestManager } from '@/lib/requests/RequestManager.ts';
-import { ReaderPage } from '@/features/reader/viewer/components/ReaderPage.tsx';
+import { OcrPageWrapper } from '@/features/reader/overlay/ocr/OcrPageWrapper.tsx';
+import { getReaderChaptersStore, getReaderStore } from '@/features/reader/stores/ReaderStore.ts';
 import { reverseString } from '@/base/utils/Strings.ts';
 import { getPage } from '@/features/reader/overlay/progress-bar/ReaderProgressBar.utils.tsx';
 import { getOptionForDirection } from '@/features/theme/services/ThemeCreator.ts';
@@ -285,8 +286,8 @@ export const createReaderPage = (
     isPrimaryPage: boolean,
     isLoaded: boolean,
     isPreloadMode: boolean,
-    onLoad: ComponentProps<typeof ReaderPage>['onLoad'],
-    onError: ComponentProps<typeof ReaderPage>['onError'],
+    onLoad: ComponentProps<typeof OcrPageWrapper>['onLoad'],
+    onError: ComponentProps<typeof OcrPageWrapper>['onError'],
     shouldLoad: boolean,
     display: boolean,
     currentPageIndex: number,
@@ -303,34 +304,42 @@ export const createReaderPage = (
     isDoublePage?: boolean,
     marginTop?: number,
     setRef?: (pagesIndex: number, ref: HTMLElement | null) => void,
-): ReactNode => (
-    <ReaderPage
-        setRef={setRef}
-        pageIndex={index}
-        pagesIndex={pagesIndex}
-        isPrimaryPage={isPrimaryPage}
-        key={url}
-        src={url}
-        alt={alt}
-        display={display}
-        priority={getPageDownloadPriority(currentPageIndex, index, totalPages, isLoaded, shouldLoad, isPreloadMode)}
-        position={position}
-        onLoad={onLoad}
-        onError={onError}
-        doublePage={isDoublePage}
-        shouldLoad={shouldLoad}
-        retryKeyPrefix={retryKeyPrefix}
-        marginTop={marginTop}
-        isLoaded={isLoaded}
-        readingMode={readingMode}
-        customFilter={customFilter}
-        pageScaleMode={pageScaleMode}
-        shouldStretchPage={shouldStretchPage}
-        readerWidth={readerWidth}
-        safeAreaInset={safeAreaInset}
-        readerNavBarWidth={readerNavBarWidth}
-    />
-);
+): ReactNode => {
+    const { currentChapter } = getReaderChaptersStore();
+    const { manga } = getReaderStore();
+    const mangaId = manga?.id !== undefined ? String(manga.id) : undefined;
+    const chapterId = currentChapter?.id !== undefined ? String(currentChapter.id) : undefined;
+    return (
+        <OcrPageWrapper
+            key={url}
+            setRef={setRef}
+            pageIndex={index}
+            pagesIndex={pagesIndex}
+            isPrimaryPage={isPrimaryPage}
+            src={url}
+            alt={alt}
+            display={display}
+            priority={getPageDownloadPriority(currentPageIndex, index, totalPages, isLoaded, shouldLoad, isPreloadMode)}
+            position={position}
+            onLoad={onLoad}
+            onError={onError}
+            doublePage={isDoublePage}
+            shouldLoad={shouldLoad}
+            retryKeyPrefix={retryKeyPrefix}
+            marginTop={marginTop}
+            isLoaded={isLoaded}
+            readingMode={readingMode}
+            customFilter={customFilter}
+            pageScaleMode={pageScaleMode}
+            shouldStretchPage={shouldStretchPage}
+            readerWidth={readerWidth}
+            safeAreaInset={safeAreaInset}
+            readerNavBarWidth={readerNavBarWidth}
+            mangaId={mangaId}
+            chapterId={chapterId}
+        />
+    );
+};
 
 type InViewportBound = {
     min?: number;

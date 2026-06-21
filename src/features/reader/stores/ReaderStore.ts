@@ -20,6 +20,8 @@ import type { ReaderProgressBarStoreSlice } from '@/features/reader/overlay/prog
 import { createReaderProgressBarStoreSlice } from '@/features/reader/overlay/progress-bar/ReaderProgressBarStore.tsx';
 import type { ReaderTapZoneStoreSlice } from '@/features/reader/tap-zones/ReaderTapZoneStore.tsx';
 import { createReaderTapZoneStoreSlice } from '@/features/reader/tap-zones/ReaderTapZoneStore.tsx';
+import type { ReaderOcrStoreSlice } from '@/features/reader/overlay/ocr/ReaderOcrStore.ts';
+import { createReaderOcrStoreSlice } from '@/features/reader/overlay/ocr/ReaderOcrStore.ts';
 import type { ReaderPagesStoreSlice } from '@/features/reader/stores/ReaderPagesStore.ts';
 import { createReaderPagesStoreSlice } from '@/features/reader/stores/ReaderPagesStore.ts';
 import type { ReaderChaptersStoreSlice } from '@/features/reader/stores/ReaderChaptersStore.ts';
@@ -35,7 +37,8 @@ interface ReaderStore
         ReaderPagesStoreSlice,
         ReaderChaptersStoreSlice,
         ReaderProgressBarStoreSlice,
-        ReaderTapZoneStoreSlice {
+        ReaderTapZoneStoreSlice,
+        ReaderOcrStoreSlice {
     reset: () => void;
     manga: TMangaReader | undefined;
     setManga: (manga: TMangaReader | undefined) => void;
@@ -86,6 +89,7 @@ const readerStore = create<ReaderStore>()(
                             ...get().chapters.reset(),
                             ...get().progressBar.reset(),
                             ...get().tapZone.reset(),
+                            ...get().ocr.reset(),
                         }),
                         undefined,
                         createActionName('reset'),
@@ -137,6 +141,7 @@ const readerStore = create<ReaderStore>()(
                 ...createReaderChaptersStoreSlice(createActionNameCreator('chapters'), set, get, store),
                 ...createReaderProgressBarStoreSlice(createActionNameCreator('progressBar'), set, get, store),
                 ...createReaderTapZoneStoreSlice(createActionNameCreator('tapZone'), set, get, store),
+                ...createReaderOcrStoreSlice(createActionNameCreator('ocr'), set, get, store),
             };
         }),
         {
@@ -180,3 +185,6 @@ export const getReaderProgressBarStore = () => readerStore.getState().progressBa
 
 export const useReaderTapZoneStore = ZustandUtil.createStoreHook(readerStore, 'tapZone');
 export const getReaderTapZoneStore = () => readerStore.getState().tapZone;
+
+export const useReaderOcrStore = ZustandUtil.createStoreHook(readerStore, 'ocr');
+export const getReaderOcrStore = () => readerStore.getState().ocr;
