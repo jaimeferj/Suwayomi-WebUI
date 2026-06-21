@@ -9,7 +9,8 @@
         "dev": "pnpm setup && vite",
         "preview": "pnpm setup && vite preview",
         "build": "pnpm setup && vite build",
-        "test": "node -e \"console.log('imagine')\"",
+        "test": "vitest run",
+        "test:watch": "vitest",
         "build-md5": "find build -type f | sort | xargs md5sum | awk '{ print $1 }' | tr -d '\n' | md5sum| awk '{ print $1 }' > buildZip/md5sum ",
         "build-zip": "cd build && rev=$(git rev-list HEAD --count) && echo r$rev > revision && zip -9 -r ../buildZip/Suwayomi-WebUI-r$rev *",
         "lint": "oxlint src tools",
@@ -124,6 +125,7 @@
         "vite": "8.0.14",
         "vite-plugin-node-polyfills": "0.28.0",
         "vite-plugin-pwa": "1.3.0",
+        "vitest": "2.1.9",
         "workbox-build": "7.4.1",
         "workbox-window": "7.4.1",
         "yargs": "18.0.0"
