@@ -46,6 +46,9 @@ export interface OcrStoreState {
     linesFor: (key: PageKey) => OcrLine[] | undefined;
 }
 
+export const AI_PROVIDERS = ['minimax', 'openai', 'ollama'] as const;
+export type AiProviderName = (typeof AI_PROVIDERS)[number];
+
 export const DEFAULT_SETTINGS: OcrSettings = {
     enabled: false,
     endpoint: 'http://127.0.0.1:8765',
@@ -60,7 +63,7 @@ export const DEFAULT_SETTINGS: OcrSettings = {
     ankiFieldReading: '',
     ankiFieldMeaning: 'Back',
     aiEnabled: false,
-    aiProvider: 'openai',
+    aiProvider: 'minimax',
     aiLevel: 'intermediate',
 };
 

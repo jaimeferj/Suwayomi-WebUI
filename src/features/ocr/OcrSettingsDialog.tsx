@@ -20,15 +20,13 @@ import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { DEFAULT_SETTINGS, useOcrStore } from '@/features/ocr/OcrStore';
+import { AI_PROVIDERS, DEFAULT_SETTINGS, useOcrStore } from '@/features/ocr/OcrStore';
+import type { AiProviderName } from '@/features/ocr/OcrStore';
 
 export interface OcrSettingsDialogProps {
     open: boolean;
     onClose: () => void;
 }
-
-const AI_PROVIDERS = ['openai', 'ollama'] as const;
-type AiProvider = (typeof AI_PROVIDERS)[number];
 
 export const OcrSettingsDialog = ({ open, onClose }: OcrSettingsDialogProps) => {
     const { t } = useLingui();
@@ -154,7 +152,7 @@ export const OcrSettingsDialog = ({ open, onClose }: OcrSettingsDialogProps) => 
                         select
                         label={t`Provider`}
                         value={settings.aiProvider}
-                        onChange={(e) => update('aiProvider', e.target.value as AiProvider)}
+                        onChange={(e) => update('aiProvider', e.target.value as AiProviderName)}
                         size="small"
                         disabled={!settings.aiEnabled}
                     >
