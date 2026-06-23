@@ -12,8 +12,7 @@ import MenuItem from '@mui/material/MenuItem';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import Checkbox from '@mui/material/Checkbox';
-import TextFieldsIcon from '@mui/icons-material/TextFields';
-import TextFieldsOutlinedIcon from '@mui/icons-material/TextFieldsOutlined';
+import TranslateIcon from '@mui/icons-material/Translate';
 import CropFreeIcon from '@mui/icons-material/CropFree';
 import { memo, useCallback, useState } from 'react';
 import { useLingui } from '@lingui/react/macro';
@@ -51,7 +50,7 @@ const BaseReaderOcrButton = () => {
         <>
             <CustomTooltip title={t`OCR menu`}>
                 <IconButton {...bindTrigger(popupState)} color={isVisible ? 'primary' : 'inherit'}>
-                    {isVisible ? <TextFieldsIcon /> : <TextFieldsOutlinedIcon />}
+                    <TranslateIcon />
                 </IconButton>
             </CustomTooltip>
             <Menu {...bindMenu(popupState)}>
@@ -61,7 +60,9 @@ const BaseReaderOcrButton = () => {
                         popupState.close();
                     }}
                 >
-                    <ListItemIcon>{isVisible ? <TextFieldsIcon /> : <TextFieldsOutlinedIcon />}</ListItemIcon>
+                    <ListItemIcon>
+                        <TranslateIcon />
+                    </ListItemIcon>
                     <ListItemText>{isVisible ? t`Hide overlay` : t`Show overlay`}</ListItemText>
                 </MenuItem>
                 <MenuItem onClick={handleSelectManual}>

@@ -73,7 +73,8 @@ export class AiApi {
     }
 
     private async request<T>(path: string, init: RequestInit): Promise<T> {
-        const response = await this.fetchImpl(`${this.endpoint}${path}`, {
+        const fetchFn = this.fetchImpl ?? ((url: string, opts: RequestInit) => fetch(url, opts));
+        const response = await fetchFn(`${this.endpoint}${path}`, {
             ...init,
             headers: {
                 'Content-Type': 'application/json',
