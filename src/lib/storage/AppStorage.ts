@@ -9,8 +9,18 @@
 /* oxlint-disable max-classes-per-file */
 import { jsonSaveParse } from '@/lib/HelperFunctions.ts';
 
+interface LocalStorageLike {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): void;
+    removeItem(key: string): void;
+}
+
 export class Storage {
-    constructor(private readonly storage: typeof window.localStorage) {}
+    private readonly storage: LocalStorageLike | null;
+
+    constructor(storage: LocalStorageLike | null) {
+        this.storage = storage;
+    }
 
     parseValue<T>(value: string | null, defaultValue: T): T {
         if (value === null) {
@@ -27,7 +37,7 @@ export class Storage {
     }
 
     getItem(key: string): string | null {
-        return this.storage.getItem(key);
+        return this.storage?.getItem(key) ?? null;
     }
 
     getItemParsed<T>(key: string, defaultValue: T): T {
@@ -35,6 +45,9 @@ export class Storage {
     }
 
     setItem(key: string, value: unknown, emitEvent: boolean = true): void {
+        if (!this.storage) {
+            return;
+        }
         const currentValue = this.getItem(key);
 
         const fireEvent = (valueToStore: string | undefined) => {
@@ -72,7 +85,7 @@ export class Storage {
 }
 
 export class AppStorage {
-    static readonly local: Storage = new Storage(window.localStorage);
+    static readonly local: Storage = new Storage(typeof window !== 'undefined' ? window.localStorage : null);
 
-    static readonly session: Storage = new Storage(window.sessionStorage);
+    static readonly session: Storage = new Storage(typeof window !== 'undefined' ? window.sessionStorage : null);
 }

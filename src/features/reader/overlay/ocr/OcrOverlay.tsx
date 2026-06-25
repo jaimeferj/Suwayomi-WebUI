@@ -69,7 +69,7 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
             void redoPage(key, loader);
             return;
         }
-        if (pageState?.status === 'idle') {
+        if (!pageState || pageState.status === 'idle') {
             const loader = () =>
                 api.ocrPage({
                     image_url: pageUrl,
@@ -83,7 +83,7 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
     }, [
         fetchEnabled,
         key,
-        pageState?.status,
+        pageState,
         redoKey,
         api,
         pageUrl,
@@ -98,7 +98,7 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
     const handleAnkiClose = useCallback(() => setAnkiLine(null), []);
     const handleExplainClose = useCallback(() => setExplainLine(null), []);
 
-    if (!overlayActive || !imageRef) {
+    if (!overlayActive) {
         return (
             <>
                 <AnkiCardDialog
@@ -114,14 +114,23 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
         );
     }
 
-    const rect = imageRef.getBoundingClientRect();
+    const imageRect = imageRef ? imageRef.getBoundingClientRect() : null;
+    const wrapperEl = imageRef?.parentElement;
+    const wrapperRect = wrapperEl ? wrapperEl.getBoundingClientRect() : null;
+    const offsetLeft = imageRect && wrapperRect ? imageRect.left - wrapperRect.left : 0;
+    const offsetTop = imageRect && wrapperRect ? imageRect.top - wrapperRect.top : 0;
+    const containerWidth = imageRect?.width ?? 0;
+    const containerHeight = imageRect?.height ?? 0;
 
     return (
         <>
             <Box
                 sx={{
                     position: 'absolute',
-                    inset: 0,
+                    left: offsetLeft,
+                    top: offsetTop,
+                    width: containerWidth,
+                    height: containerHeight,
                     pointerEvents: 'none',
                     zIndex: 2,
                 }}
@@ -132,8 +141,8 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
                     <OcrTextBox
                         key={`${key}-${bboxKey(line.tightBoundingBox)}`}
                         line={line}
-                        containerWidth={rect.width}
-                        containerHeight={rect.height}
+                        containerWidth={containerWidth}
+                        containerHeight={containerHeight}
                         showOnHover={settings.showOnHover}
                         ankiEnabled={settings.ankiEnabled}
                         aiEnabled={settings.aiEnabled}

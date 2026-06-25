@@ -6,6 +6,9 @@ node_modules/
 
 build/*
 dev-dist/*
+test-results/
+.tmp-e2e-build/
+playwright-report/
 
 src/lib/graphql/schema.json
 .oxlintrc.jsonc

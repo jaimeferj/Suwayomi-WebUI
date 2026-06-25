@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { OcrApi } from '@/features/ocr/OcrApi';
 import { AnkiApi } from '@/features/ocr/AnkiApi';
 import { AiApi } from '@/features/ocr/AiApi';
+import { AppStorage } from '@/lib/storage/AppStorage.ts';
 import type { OcrLine, OcrPageResult, OcrRegionResult, OcrSettings, OcrStatus } from '@/features/ocr/Ocr.types';
 
 export type PageKey = string;
@@ -67,8 +68,36 @@ export const DEFAULT_SETTINGS: OcrSettings = {
     aiLevel: 'intermediate',
 };
 
+const SETTINGS_STORAGE_KEY = 'ocr.settings.v1';
+
+const loadStoredSettings = (): OcrSettings => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+        return { ...DEFAULT_SETTINGS };
+    }
+    try {
+        const stored = AppStorage.local.getItemParsed<Partial<OcrSettings> | null>(SETTINGS_STORAGE_KEY, null);
+        if (!stored) {
+            return { ...DEFAULT_SETTINGS };
+        }
+        return { ...DEFAULT_SETTINGS, ...stored };
+    } catch {
+        return { ...DEFAULT_SETTINGS };
+    }
+};
+
+const persistSettings = (settings: OcrSettings) => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+        return;
+    }
+    try {
+        AppStorage.local.setItem(SETTINGS_STORAGE_KEY, settings, true);
+    } catch {
+        // ignore storage failures (private mode, quota, etc.)
+    }
+};
+
 export const useOcrStore = create<OcrStoreState>((set, get) => {
-    const initialSettings: OcrSettings = { ...DEFAULT_SETTINGS };
+    const initialSettings: OcrSettings = loadStoredSettings();
     const api = new OcrApi({ endpoint: initialSettings.endpoint });
     const ankiApi = new AnkiApi({ endpoint: initialSettings.ankiEndpoint });
     const aiApi = new AiApi({ endpoint: initialSettings.endpoint });
@@ -82,6 +111,7 @@ export const useOcrStore = create<OcrStoreState>((set, get) => {
         regions: {},
         setSettings: (patch) => {
             const merged = { ...get().settings, ...patch };
+            persistSettings(merged);
             set({
                 settings: merged,
                 api: new OcrApi({ endpoint: merged.endpoint }),
