@@ -42,7 +42,9 @@ interface PageSpec {
     pageIndex: number;
     imageUrl: string;
     mockText: string;
+    mockColumns?: string[];
     vertical?: boolean;
+    box?: { x: number; y: number; width: number; height: number };
 }
 
 const PAGES: PageSpec[] = [
@@ -58,22 +60,32 @@ const PAGES: PageSpec[] = [
         mockText: '実戦剣術も一流です',
         vertical: true,
     },
+    {
+        pageIndex: 2,
+        imageUrl: '/fixtures/01.jpg',
+        mockText: '王は 誰だ？',
+        mockColumns: ['王は', '誰だ？'],
+        vertical: true,
+        box: { x: 0.55, y: 0.1, width: 0.25, height: 0.8 },
+    },
 ];
 
-function mockLine(text: string, pageIndex: number, options: { vertical?: boolean } = {}) {
-    if (options.vertical) {
+function mockLine(spec: PageSpec) {
+    if (spec.vertical) {
+        const box = spec.box ?? { x: 0.55, y: 0.1, width: 0.25, height: 0.8 };
+        const sourceLines = spec.mockColumns ?? spec.mockText.split(/\s+/).filter(Boolean);
         return {
-            text,
-            tightBoundingBox: { x: 0.55, y: 0.1, width: 0.25, height: 0.8 },
+            text: spec.mockText,
+            tightBoundingBox: box,
             forcedOrientation: 'vertical' as const,
             isMerged: false,
-            sourceLines: text.split(''),
+            sourceLines,
             blockFontSize: 24,
         };
     }
-    const y = pageIndex === 0 ? 0.15 : 0.2;
+    const y = spec.pageIndex === 0 ? 0.15 : 0.2;
     return {
-        text,
+        text: spec.mockText,
         tightBoundingBox: { x: 0.1, y, width: 0.8, height: 0.18 },
         forcedOrientation: 'horizontal' as const,
         isMerged: false,
@@ -141,7 +153,14 @@ const TestHarness = () => {
     useEffect(() => {
         const realFetch = window.fetch.bind(window);
         const handleFetch: typeof window.fetch = async (input, init) => {
-            const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+            let url: string;
+            if (typeof input === 'string') {
+                url = input;
+            } else if (input instanceof URL) {
+                url = input.toString();
+            } else {
+                ({ url } = input);
+            }
             if (url.includes('/ocr/page') && init?.method === 'POST' && init.body) {
                 const payload = JSON.parse(init.body as string) as { image_url?: string; page_index?: number };
                 const pageIndex = payload.page_index ?? 0;
@@ -154,7 +173,7 @@ const TestHarness = () => {
                             img_height: 1200,
                             cached: false,
                             backend: 'mock',
-                            lines: [mockLine(spec.mockText, pageIndex, { vertical: spec.vertical })],
+                            lines: [mockLine(spec)],
                         }),
                         { status: 200, headers: { 'Content-Type': 'application/json' } },
                     );

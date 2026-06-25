@@ -58,10 +58,7 @@ const OcrTextBoxBase = ({
 
     const isVertical = layout.orientation === 'vertical';
     const columns = layout.columns ?? [{ text: line.text, gapBefore: 0 }];
-    const columnKeys = useMemo(
-        () => columns.map((col, idx) => `${idx}-${col.text}-${col.gapBefore.toFixed(2)}`),
-        [columns],
-    );
+    const columnKeys = useMemo(() => columns.map((col, idx) => `${idx}-${col.text}`), [columns]);
 
     return (
         <Tooltip title={line.text} placement="top" disableInteractive open={hovered}>
@@ -74,8 +71,6 @@ const OcrTextBoxBase = ({
                     top: `${line.tightBoundingBox.y * 100}%`,
                     width: `${line.tightBoundingBox.width * 100}%`,
                     height: `${line.tightBoundingBox.height * 100}%`,
-                    fontSize: `${layout.fontSize}px`,
-                    lineHeight: 1,
                     color: revealed ? 'common.white' : 'transparent',
                     backgroundColor: revealed ? 'rgba(0,0,0,0.6)' : 'transparent',
                     border: revealed ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
@@ -83,13 +78,17 @@ const OcrTextBoxBase = ({
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: isVertical ? 'row-reverse' : 'column',
-                    alignItems: isVertical ? 'flex-start' : 'center',
-                    justifyContent: isVertical ? 'flex-start' : 'center',
+                    alignItems: isVertical ? 'stretch' : 'center',
+                    justifyContent: isVertical ? 'center' : 'center',
+                    paddingLeft: isVertical ? `${layout.sideMargin}px` : 0,
+                    paddingRight: isVertical ? `${layout.sideMargin}px` : 0,
                     gap: isVertical ? `${layout.columnGap}px` : 0,
                 }}
                 data-ocr-text=""
                 data-ocr-orientation={layout.orientation}
                 data-ocr-columns={layout.columnCount}
+                data-ocr-side-margin={layout.sideMargin}
+                data-ocr-column-gap={layout.columnGap}
             >
                 {columns.map((col, idx) => (
                     <Box
@@ -100,11 +99,16 @@ const OcrTextBoxBase = ({
                             fontSize: `${layout.fontSize}px`,
                             lineHeight: 1,
                             whiteSpace: 'pre',
-                            minWidth: 0,
-                            minHeight: 0,
+                            width: isVertical ? `${layout.fontSize}px` : 'auto',
+                            height: isVertical ? '100%' : 'auto',
+                            flexShrink: 0,
+                            flexGrow: 0,
+                            flexBasis: 'auto',
+                            display: 'inline-block',
                             overflow: 'hidden',
                         }}
                         data-ocr-column=""
+                        data-ocr-column-text={col.text}
                     >
                         {col.text}
                     </Box>
