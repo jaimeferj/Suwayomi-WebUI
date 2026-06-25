@@ -1490,6 +1490,10 @@ msgstr "Download location"
 msgid "Download new chapters"
 msgstr "Download new chapters"
 
+#: src/features/reader/overlay/navigation/components/ReaderOcrButton.tsx
+msgid "Download OCR for current page"
+msgstr "Download OCR for current page"
+
 #: src/features/downloads/screens/DownloadQueue.tsx
 #: src/features/navigation-bar/NavigationBar.constants.ts
 msgid "Download queue"
