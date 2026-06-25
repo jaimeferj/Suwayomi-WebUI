@@ -30,6 +30,7 @@ export interface OcrTextLayout {
     fontSize: number;
     columnCount: number;
     columnGap: number;
+    sideMargin: number;
     columns?: OcrColumn[];
 }
 
@@ -38,6 +39,9 @@ const DEFAULT_GLYPH_ASPECT = 1.05;
 const MIN_COLUMN_GAP_PX = 2;
 const MAX_COLUMN_COUNT = 12;
 const MIN_COLUMN_COUNT = 1;
+
+const GAP_RATIO = 0.1;
+const SIDE_MARGIN_RATIO = 0.06;
 
 function graphemeLength(text: string): number {
     return Math.max([...text].length, 1);
@@ -49,6 +53,13 @@ function textLines(text: string): string[] {
         .map((line) => line.trim())
         .filter(Boolean);
     return lines.length > 0 ? lines : [text.trim()];
+}
+
+function whitespaceColumns(text: string): string[] {
+    return text
+        .split(/\s+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
 }
 
 function containsCjk(text: string): boolean {
@@ -68,18 +79,52 @@ function horizontalFontSize(text: string, box: Pick<BBoxPx, 'width' | 'height'>)
     return Math.max(MIN_FONT_SIZE, Math.min(byWidth, byHeight));
 }
 
+function getRawColumns(
+    text: string,
+    sourceLines: ReadonlyArray<string> | null | undefined,
+    splitOnWhitespace: boolean,
+): string[] {
+    const cleanSourceLines = sourceLines?.map((line) => line.trim()).filter(Boolean) ?? [];
+    if (cleanSourceLines.length > 0) {
+        return cleanSourceLines;
+    }
+
+    if (splitOnWhitespace) {
+        const columns = whitespaceColumns(text);
+        if (columns.length > 1) {
+            return columns;
+        }
+    }
+
+    return textLines(text);
+}
+
+function isLikelyVertical(
+    text: string,
+    box: Pick<BBoxPx, 'width' | 'height'>,
+    forcedOrientation?: string | null,
+): boolean {
+    if (forcedOrientation === 'vertical') {
+        return true;
+    }
+    if (forcedOrientation === 'horizontal') {
+        return false;
+    }
+    return containsCjk(text) && box.height >= box.width;
+}
+
 function normalizeColumns(
     text: string,
     box: Pick<BBoxPx, 'width' | 'height'>,
     sourceLines?: ReadonlyArray<string> | null,
+    forcedOrientation?: string | null,
 ): OcrColumn[] {
-    const cleanSourceLines = sourceLines?.map((line) => line.trim()).filter(Boolean) ?? [];
-    const rawColumns = cleanSourceLines.length > 0 ? cleanSourceLines : textLines(text);
+    const splitOnWhitespace = isLikelyVertical(text, box, forcedOrientation);
+    const rawColumns = getRawColumns(text, sourceLines, splitOnWhitespace);
     if (rawColumns.length === 0) {
         return [{ text, gapBefore: 0 }];
     }
 
-    const total = graphemeLength(text);
     const glyphAspect = box.height / Math.max(box.width, MIN_FONT_SIZE);
     const aspectRatio = box.width / Math.max(box.height, MIN_FONT_SIZE);
 
@@ -99,23 +144,6 @@ function normalizeColumns(
         }
         columns = splitIntoColumns(single, estimated);
     }
-
-    const totalColumns = columns.length;
-    const availableWidth = Math.max(box.width - (totalColumns - 1) * MIN_COLUMN_GAP_PX, MIN_FONT_SIZE);
-    const perColumnWidth = availableWidth / totalColumns;
-    const gap = totalColumns > 1 ? Math.max(MIN_COLUMN_GAP_PX, box.width * 0.04) : 0;
-
-    const columnFractions = columns.map((col) => {
-        const len = graphemeLength(col.text);
-        const minFraction = MIN_FONT_SIZE / Math.max(perColumnWidth, MIN_FONT_SIZE);
-        const fraction = Math.max(len / Math.max(total, 1), minFraction);
-        return Math.min(1, fraction);
-    });
-
-    columns = columns.map((col, idx) => ({
-        text: col.text,
-        gapBefore: idx === 0 ? 0 : gap * columnFractions.slice(0, idx).reduce((a, b) => a + b, 0),
-    }));
 
     return columns;
 }
@@ -142,21 +170,65 @@ function splitIntoColumns(text: string, targetCount: number): OcrColumn[] {
     return columns;
 }
 
-function verticalFontSize(
-    text: string,
+export interface VerticalLayoutMetrics {
+    fontSize: number;
+    columnGap: number;
+    sideMargin: number;
+}
+
+function computeVerticalLayout(
     box: Pick<BBoxPx, 'width' | 'height'>,
     columns: OcrColumn[],
     blockFontSize?: number | null,
-): number {
+): VerticalLayoutMetrics {
     const maxColumnLength = Math.max(...columns.map((col) => graphemeLength(col.text)), 1);
     const columnsCount = Math.max(columns.length, 1);
+
     const byHeight = box.height / maxColumnLength;
-    const byWidth = box.width / columnsCount;
-    const baseFontSize = Math.max(MIN_FONT_SIZE, Math.min(byHeight, byWidth));
-    if (typeof blockFontSize === 'number' && blockFontSize > 0) {
-        return Math.min(blockFontSize, Math.max(baseFontSize, blockFontSize));
+
+    const minGap = MIN_COLUMN_GAP_PX;
+    const minSideMargin = MIN_COLUMN_GAP_PX;
+    const targetGap = columnsCount > 1 ? Math.max(minGap, box.width * GAP_RATIO) : 0;
+    const targetSideMargin = columnsCount > 1 ? Math.max(minSideMargin, box.width * SIDE_MARGIN_RATIO) : 0;
+
+    const byWidth = Math.max(
+        MIN_FONT_SIZE,
+        (box.width - 2 * targetSideMargin - (columnsCount - 1) * targetGap) / Math.max(columnsCount, 1),
+    );
+
+    let fontSize = Math.min(byHeight, byWidth);
+
+    const minUsedWidth = columnsCount * fontSize + (columnsCount - 1) * targetGap + 2 * targetSideMargin;
+    const remaining = box.width - minUsedWidth;
+
+    let columnGap = targetGap;
+    let sideMargin = targetSideMargin;
+
+    if (remaining > 0) {
+        const gapExtra = columnsCount > 1 ? (remaining * 0.6) / (columnsCount - 1) : 0;
+        const sideExtra = (remaining * 0.4) / 2;
+        columnGap += gapExtra;
+        sideMargin += sideExtra;
+    } else if (remaining < 0) {
+        const deficit = -remaining;
+        const gapReduction = Math.min(deficit, Math.max(columnGap - minGap, 0) * (columnsCount - 1));
+        columnGap -= gapReduction / Math.max(columnsCount - 1, 1);
+        const remainingDeficit = deficit - gapReduction;
+        const sideReduction = Math.min(remainingDeficit, Math.max(sideMargin - minSideMargin, 0) * 2);
+        sideMargin -= sideReduction / 2;
     }
-    return baseFontSize;
+
+    fontSize = Math.max(MIN_FONT_SIZE, fontSize);
+
+    if (typeof blockFontSize === 'number' && blockFontSize > 0) {
+        fontSize = Math.min(blockFontSize, Math.max(fontSize, MIN_FONT_SIZE));
+    }
+
+    return {
+        fontSize,
+        columnGap: columnsCount > 1 ? columnGap : 0,
+        sideMargin,
+    };
 }
 
 export function getOcrTextLayout(input: OcrLayoutInput): OcrTextLayout {
@@ -170,61 +242,77 @@ export function getOcrTextLayout(input: OcrLayoutInput): OcrTextLayout {
     const aspectRatio = box.width / box.height;
     const forcedVertical = input.forcedOrientation === 'vertical';
 
-    const columns = normalizeColumns(text, box, input.sourceLines ?? null);
-    const verticalSize = verticalFontSize(text, box, columns, input.blockFontSize ?? null);
+    const columns = normalizeColumns(text, box, input.sourceLines ?? null, input.forcedOrientation ?? null);
 
-    if (lines.length > 1 && containsCjk(text) && verticalSize >= horizontalSize * 0.75) {
-        return {
-            orientation: 'vertical',
-            fontSize: verticalSize,
-            columnCount: columns.length,
-            columnGap: 0,
-            columns,
-        };
+    if (lines.length > 1 && containsCjk(text)) {
+        const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
+        if (metrics.fontSize >= horizontalSize * 0.75) {
+            return {
+                orientation: 'vertical',
+                fontSize: metrics.fontSize,
+                columnCount: columns.length,
+                columnGap: metrics.columnGap,
+                sideMargin: metrics.sideMargin,
+                columns,
+            };
+        }
     }
 
-    if (aspectRatio >= 2.5 && horizontalSize >= verticalSize * 0.6) {
+    if (
+        aspectRatio >= 2.5 &&
+        horizontalSize >= computeVerticalLayout(box, columns, input.blockFontSize ?? null).fontSize * 0.6
+    ) {
         return {
             orientation: 'horizontal',
             fontSize: horizontalSize,
             columnCount: 1,
             columnGap: 0,
+            sideMargin: 0,
         };
     }
 
     if (aspectRatio <= 0.6 && (forcedVertical || containsCjk(text))) {
+        const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
         return {
             orientation: 'vertical',
-            fontSize: verticalSize,
+            fontSize: metrics.fontSize,
             columnCount: columns.length,
-            columnGap: 0,
+            columnGap: metrics.columnGap,
+            sideMargin: metrics.sideMargin,
             columns,
         };
     }
 
-    if (forcedVertical && verticalSize >= horizontalSize * 0.85) {
-        return {
-            orientation: 'vertical',
-            fontSize: verticalSize,
-            columnCount: columns.length,
-            columnGap: 0,
-            columns,
-        };
+    if (forcedVertical) {
+        const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
+        if (metrics.fontSize >= horizontalSize * 0.85) {
+            return {
+                orientation: 'vertical',
+                fontSize: metrics.fontSize,
+                columnCount: columns.length,
+                columnGap: metrics.columnGap,
+                sideMargin: metrics.sideMargin,
+                columns,
+            };
+        }
     }
 
-    if (horizontalSize >= verticalSize) {
+    if (horizontalSize >= computeVerticalLayout(box, columns, input.blockFontSize ?? null).fontSize) {
         return {
             orientation: 'horizontal',
             fontSize: horizontalSize,
             columnCount: 1,
             columnGap: 0,
+            sideMargin: 0,
         };
     }
+    const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
     return {
         orientation: 'vertical',
-        fontSize: verticalSize,
+        fontSize: metrics.fontSize,
         columnCount: columns.length,
-        columnGap: 0,
+        columnGap: metrics.columnGap,
+        sideMargin: metrics.sideMargin,
         columns,
     };
 }

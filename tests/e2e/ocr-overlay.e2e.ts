@@ -12,6 +12,7 @@ import type { Page } from '@playwright/test';
 const expectedTexts = {
     page0: '立川で見た〝穴〟の下の巨大な眼は',
     page1: '実戦剣術も一流です',
+    page2: '王は 誰だ？',
 } as const;
 
 const waitForHarness = async (page: Page) => {
@@ -24,25 +25,21 @@ const waitForHarness = async (page: Page) => {
     );
 };
 
+const scrollPageIntoView = async (page: Page, pageIndex: number) => {
+    await page.evaluate((idx) => {
+        const el = document.querySelector(`[data-testid="page-${idx}"]`);
+        if (el) {
+            el.scrollIntoView({ block: 'center', inline: 'center' });
+        }
+    }, pageIndex);
+};
+
 test.describe('OCR overlay in front of manga reader UI', () => {
     test('renders OCR text from /ocr/page requests on top of the manga page image', async ({ page }) => {
-        page.on('console', (msg) => {
-            console.log(`[browser:${msg.type()}]`, msg.text());
-        });
-        page.on('pageerror', (err) => {
-            console.log('[browser:pageerror]', err.message);
-        });
-
         await page.goto('/');
 
         // Wait for harness to register its bridge
-        try {
-            await page.waitForFunction(() => window.__OCR_TEST__ !== undefined, undefined, { timeout: 10_000 });
-        } catch (e) {
-            const html = await page.content();
-            console.log('Page HTML (first 2000):', html.slice(0, 2000));
-            throw e;
-        }
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined, undefined, { timeout: 10_000 });
 
         // Enable OCR + show overlay
         await page.evaluate(() => {
@@ -85,14 +82,88 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         expect(Number(overlayZIndex)).toBeGreaterThan(0);
     });
 
-    test('persists enabled/visible settings across reloads via localStorage', async ({ page }) => {
-        page.on('console', (msg) => {
-            console.log(`[browser:${msg.type()}]`, msg.text());
-        });
-        page.on('pageerror', (err) => {
-            console.log('[browser:pageerror]', err.message);
+    test('renders whitespace-separated vertical columns right-to-left (王は on the right, 誰だ？ on the left)', async ({
+        page,
+    }) => {
+        const page2Text = expectedTexts.page2;
+
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.clearPages();
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8765');
+            window.__OCR_TEST__!.setVisible(true);
         });
 
+        // Bring the 王は page into the viewport so its overlay renders.
+        await scrollPageIntoView(page, 2);
+
+        // Wait until OCR for the 王は page has produced lines.
+        await page.waitForFunction(
+            (needle) => {
+                const lines = window.__OCR_TEST__?.lines ?? [];
+                return lines.some((text) => text.includes(needle));
+            },
+            page2Text,
+            { timeout: 30_000 },
+        );
+
+        await page.waitForSelector('[data-testid="page-2"] [data-ocr-text]', { timeout: 10_000 });
+
+        const pageLocator = page.locator('[data-testid="page-2"]');
+        const textBox = pageLocator.locator('[data-ocr-text]').first();
+        await expect(textBox).toBeVisible();
+        await expect(textBox).toHaveAttribute('data-ocr-orientation', 'vertical');
+        await expect(textBox).toHaveAttribute('data-ocr-columns', '2');
+
+        const textBoxMetrics = await textBox.evaluate((node) => {
+            const rect = node.getBoundingClientRect();
+            const style = window.getComputedStyle(node);
+            return {
+                left: rect.left,
+                right: rect.right,
+                width: rect.width,
+                paddingLeft: parseFloat(style.paddingLeft) || 0,
+                paddingRight: parseFloat(style.paddingRight) || 0,
+                columnGap: parseFloat(style.columnGap || style.gap) || 0,
+            };
+        });
+        expect(textBoxMetrics.columnGap).toBeGreaterThan(0);
+        expect(textBoxMetrics.paddingLeft).toBeGreaterThanOrEqual(0);
+        expect(textBoxMetrics.paddingRight).toBeGreaterThanOrEqual(0);
+
+        const columnBoxes = await pageLocator.locator('[data-ocr-column]').evaluateAll((nodes) =>
+            nodes.map((node) => {
+                const rect = node.getBoundingClientRect();
+                return {
+                    text: node.getAttribute('data-ocr-column-text') ?? '',
+                    x: rect.x,
+                    width: rect.width,
+                };
+            }),
+        );
+
+        expect(columnBoxes).toHaveLength(2);
+        const rightColumn = columnBoxes.find((col) => col.text === '王は');
+        const leftColumn = columnBoxes.find((col) => col.text === '誰だ？');
+        expect(rightColumn).toBeDefined();
+        expect(leftColumn).toBeDefined();
+        expect(rightColumn!.x).toBeGreaterThan(leftColumn!.x);
+        expect(leftColumn!.x).toBeGreaterThan(0);
+        expect(rightColumn!.width).toBeGreaterThan(0);
+        expect(leftColumn!.width).toBeGreaterThan(0);
+
+        const separation = rightColumn!.x - (leftColumn!.x + leftColumn!.width);
+        expect(separation).toBeGreaterThanOrEqual(textBoxMetrics.columnGap - 0.5);
+        const leftPad = leftColumn!.x - textBoxMetrics.left;
+        const rightPad = textBoxMetrics.right - (rightColumn!.x + rightColumn!.width);
+        expect(leftPad).toBeCloseTo(textBoxMetrics.paddingLeft, 0);
+        expect(rightPad).toBeCloseTo(textBoxMetrics.paddingRight, 0);
+    });
+
+    test('persists enabled/visible settings across reloads via localStorage', async ({ page }) => {
         await page.goto('/');
         await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
 

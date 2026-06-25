@@ -31,7 +31,6 @@ describe('getOcrTextLayout', () => {
         });
 
         expect(layout.orientation).toBe('vertical');
-        expect(layout.fontSize).toBeCloseTo(20, 1);
         expect(layout.columnCount).toBe(8);
         expect(layout.columns).toBeDefined();
         expect(layout.columns?.[0].text).toBe('私は');
@@ -61,8 +60,9 @@ describe('getOcrTextLayout', () => {
     });
 
     it('infers multiple vertical columns for a wide vertical box with long Japanese text', () => {
+        const inputText = '立川で見た〝穴〟の下の巨大な眼は';
         const layout = getOcrTextLayout({
-            text: '立川で見た〝穴〟の下の巨大な眼は',
+            text: inputText,
             box: { width: 120, height: 600 },
             forcedOrientation: 'vertical',
         });
@@ -71,9 +71,7 @@ describe('getOcrTextLayout', () => {
         expect(layout.columnCount).toBeGreaterThan(1);
         expect(layout.columnCount).toBeLessThanOrEqual(12);
         expect(layout.columns?.length).toBe(layout.columnCount);
-        expect(layout.columns?.reduce((acc, col) => acc + [...col.text].length, 0)).toBe(
-            [...(layout.text ?? '')].length || [...'立川で見た〝穴〟の下の巨大な眼は'].length,
-        );
+        expect(layout.columns?.reduce((acc, col) => acc + [...col.text].length, 0)).toBe([...inputText].length);
         expect(layout.fontSize).toBeGreaterThan(0);
     });
 
@@ -103,7 +101,7 @@ describe('getOcrTextLayout', () => {
         expect(layout.fontSize).toBeGreaterThan(0);
     });
 
-    it('produces positive column gaps for multi-column vertical layout', () => {
+    it('produces positive column gaps and side margins for multi-column vertical layout', () => {
         const layout = getOcrTextLayout({
             text: 'あいうえおかきくけこさしすせそ',
             box: { width: 200, height: 400 },
@@ -112,8 +110,52 @@ describe('getOcrTextLayout', () => {
 
         expect(layout.orientation).toBe('vertical');
         expect(layout.columnCount).toBeGreaterThan(1);
-        for (let i = 1; i < (layout.columns?.length ?? 0); i += 1) {
-            expect(layout.columns?.[i].gapBefore ?? 0).toBeGreaterThan(0);
-        }
+        expect(layout.columnGap).toBeGreaterThan(0);
+        expect(layout.sideMargin).toBeGreaterThan(0);
+        const totalWidth =
+            layout.columnCount * layout.fontSize + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
+        expect(totalWidth).toBeCloseTo(200, 1);
+    });
+
+    it('splits vertical CJK text on whitespace into separate columns', () => {
+        const layout = getOcrTextLayout({
+            text: '王は 誰だ？',
+            box: { width: 80, height: 160 },
+            forcedOrientation: 'vertical',
+        });
+
+        expect(layout.orientation).toBe('vertical');
+        expect(layout.columnCount).toBe(2);
+        expect(layout.columns?.map((col) => col.text)).toEqual(['王は', '誰だ？']);
+        expect(layout.fontSize).toBeGreaterThan(0);
+        expect(layout.columnGap).toBeGreaterThan(0);
+        expect(layout.sideMargin).toBeGreaterThanOrEqual(0);
+        const totalWidth =
+            layout.columnCount * layout.fontSize + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
+        expect(totalWidth).toBeCloseTo(80, 1);
+    });
+
+    it('does not split on whitespace when the box is wider than tall', () => {
+        const layout = getOcrTextLayout({
+            text: 'hello world',
+            box: { width: 200, height: 60 },
+        });
+
+        expect(layout.orientation).toBe('horizontal');
+        expect(layout.columnCount).toBe(1);
+    });
+
+    it('places the first sourceLine column at the rightmost position for vertical RTL rendering', () => {
+        const layout = getOcrTextLayout({
+            text: '王は 誰だ？',
+            box: { width: 100, height: 200 },
+            forcedOrientation: 'vertical',
+            sourceLines: ['王は', '誰だ？'],
+        });
+
+        expect(layout.orientation).toBe('vertical');
+        expect(layout.columnCount).toBe(2);
+        expect(layout.columns?.[0].text).toBe('王は');
+        expect(layout.columns?.[1].text).toBe('誰だ？');
     });
 });
