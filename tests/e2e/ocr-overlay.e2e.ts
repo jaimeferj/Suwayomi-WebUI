@@ -71,6 +71,12 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         expect(overlayTexts.some((text) => text.includes(expectedTexts.page0))).toBe(true);
         expect(overlayTexts.some((text) => text.includes(expectedTexts.page1))).toBe(true);
 
+        // Vertical text must be rendered as multiple inferred columns with vertical writing mode
+        const verticalOrientations = await page.locator('[data-ocr-text][data-ocr-orientation="vertical"]').count();
+        expect(verticalOrientations).toBeGreaterThan(0);
+        const columnNodes = await page.locator('[data-ocr-column]').count();
+        expect(columnNodes).toBeGreaterThan(0);
+
         // OCR overlay must render above the image (z-index > 0)
         const overlayZIndex = await page
             .locator('[data-ocr-overlay]')

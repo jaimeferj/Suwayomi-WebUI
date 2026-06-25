@@ -15,6 +15,10 @@ export interface OcrLine {
     tightBoundingBox: BBox;
     forcedOrientation: OcrOrientation;
     isMerged: boolean;
+    sourceLines?: string[];
+    fontSize?: number;
+    blockFontSize?: number;
+    lineCoords?: Array<Array<[number, number]>>;
 }
 
 export interface OcrPageResult {
@@ -30,6 +34,10 @@ export interface OcrRegionResult {
     tightBoundingBox: BBox;
     forcedOrientation: OcrOrientation;
     isMerged: boolean;
+    sourceLines?: string[];
+    fontSize?: number;
+    blockFontSize?: number;
+    lineCoords?: Array<Array<[number, number]>>;
 }
 
 export interface OcrStatus {

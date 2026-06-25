@@ -6,7 +6,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -51,7 +51,17 @@ const OcrTextBoxBase = ({
             height: containerHeight * line.tightBoundingBox.height,
         },
         forcedOrientation: line.forcedOrientation,
+        sourceLines: line.sourceLines ?? null,
+        blockFontSize: line.blockFontSize ?? line.fontSize ?? null,
+        lineCoords: line.lineCoords ?? null,
     });
+
+    const isVertical = layout.orientation === 'vertical';
+    const columns = layout.columns ?? [{ text: line.text, gapBefore: 0 }];
+    const columnKeys = useMemo(
+        () => columns.map((col, idx) => `${idx}-${col.text}-${col.gapBefore.toFixed(2)}`),
+        [columns],
+    );
 
     return (
         <Tooltip title={line.text} placement="top" disableInteractive open={hovered}>
@@ -64,23 +74,41 @@ const OcrTextBoxBase = ({
                     top: `${line.tightBoundingBox.y * 100}%`,
                     width: `${line.tightBoundingBox.width * 100}%`,
                     height: `${line.tightBoundingBox.height * 100}%`,
-                    writingMode: layout.orientation === 'vertical' ? 'vertical-rl' : 'horizontal-tb',
                     fontSize: `${layout.fontSize}px`,
                     lineHeight: 1,
                     color: revealed ? 'common.white' : 'transparent',
                     backgroundColor: revealed ? 'rgba(0,0,0,0.6)' : 'transparent',
                     border: revealed ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
                     pointerEvents: 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: layout.orientation === 'vertical' ? 'flex-start' : 'center',
-                    userSelect: 'text',
                     overflow: 'hidden',
-                    whiteSpace: 'pre',
+                    display: 'flex',
+                    flexDirection: isVertical ? 'row-reverse' : 'column',
+                    alignItems: isVertical ? 'flex-start' : 'center',
+                    justifyContent: isVertical ? 'flex-start' : 'center',
+                    gap: isVertical ? `${layout.columnGap}px` : 0,
                 }}
                 data-ocr-text=""
+                data-ocr-orientation={layout.orientation}
+                data-ocr-columns={layout.columnCount}
             >
-                {line.text}
+                {columns.map((col, idx) => (
+                    <Box
+                        key={columnKeys[idx] ?? col.text}
+                        sx={{
+                            writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
+                            textOrientation: 'upright',
+                            fontSize: `${layout.fontSize}px`,
+                            lineHeight: 1,
+                            whiteSpace: 'pre',
+                            minWidth: 0,
+                            minHeight: 0,
+                            overflow: 'hidden',
+                        }}
+                        data-ocr-column=""
+                    >
+                        {col.text}
+                    </Box>
+                ))}
                 {hovered && (
                     <ButtonGroup
                         size="small"
@@ -89,7 +117,7 @@ const OcrTextBoxBase = ({
                             position: 'absolute',
                             top: 0,
                             right: 0,
-                            transform: layout.orientation === 'vertical' ? 'rotate(90deg)' : 'none',
+                            transform: isVertical ? 'rotate(90deg)' : 'none',
                             transformOrigin: 'top right',
                             zIndex: 1,
                         }}

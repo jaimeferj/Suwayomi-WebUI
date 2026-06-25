@@ -42,6 +42,7 @@ interface PageSpec {
     pageIndex: number;
     imageUrl: string;
     mockText: string;
+    vertical?: boolean;
 }
 
 const PAGES: PageSpec[] = [
@@ -49,15 +50,27 @@ const PAGES: PageSpec[] = [
         pageIndex: 0,
         imageUrl: '/fixtures/01.jpg',
         mockText: '立川で見た〝穴〟の下の巨大な眼は',
+        vertical: true,
     },
     {
         pageIndex: 1,
         imageUrl: '/fixtures/02.jpg',
         mockText: '実戦剣術も一流です',
+        vertical: true,
     },
 ];
 
-function mockLine(text: string, pageIndex: number) {
+function mockLine(text: string, pageIndex: number, options: { vertical?: boolean } = {}) {
+    if (options.vertical) {
+        return {
+            text,
+            tightBoundingBox: { x: 0.55, y: 0.1, width: 0.25, height: 0.8 },
+            forcedOrientation: 'vertical' as const,
+            isMerged: false,
+            sourceLines: text.split(''),
+            blockFontSize: 24,
+        };
+    }
     const y = pageIndex === 0 ? 0.15 : 0.2;
     return {
         text,
@@ -141,7 +154,7 @@ const TestHarness = () => {
                             img_height: 1200,
                             cached: false,
                             backend: 'mock',
-                            lines: [mockLine(spec.mockText, pageIndex)],
+                            lines: [mockLine(spec.mockText, pageIndex, { vertical: spec.vertical })],
                         }),
                         { status: 200, headers: { 'Content-Type': 'application/json' } },
                     );
