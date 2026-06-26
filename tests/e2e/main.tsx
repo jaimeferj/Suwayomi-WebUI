@@ -16,6 +16,7 @@ import { i18n } from '@lingui/core';
 import { OcrOverlay } from '@/features/reader/overlay/ocr/OcrOverlay';
 import { useOcrStore, pageKey } from '@/features/ocr/OcrStore';
 import { getReaderStore } from '@/features/reader/stores/ReaderStore';
+import { ReaderOcrButton } from '@/features/reader/overlay/navigation/components/ReaderOcrButton';
 
 declare global {
     interface Window {
@@ -24,10 +25,12 @@ declare global {
             error?: string;
             lines: string[];
             lastRequest?: { imageUrl: string; payload: unknown };
+            persistRequests?: Array<{ imageUrl: string; payload: unknown }>;
             setVisible: (visible: boolean) => void;
             setEnabled: (enabled: boolean) => void;
             setEndpoint: (endpoint: string) => void;
             clearPages: () => void;
+            setCurrentPage: (pageIndex: number) => void;
         };
     }
 }
@@ -162,11 +165,21 @@ const TestHarness = () => {
                 ({ url } = input);
             }
             if (url.includes('/ocr/page') && init?.method === 'POST' && init.body) {
-                const payload = JSON.parse(init.body as string) as { image_url?: string; page_index?: number };
+                const payload = JSON.parse(init.body as string) as {
+                    image_url?: string;
+                    page_index?: number;
+                    persist?: boolean;
+                };
                 const pageIndex = payload.page_index ?? 0;
                 const spec = PAGES[pageIndex];
                 if (spec) {
                     window.__OCR_TEST__!.lastRequest = { imageUrl: payload.image_url ?? '', payload };
+                    if (payload.persist) {
+                        window.__OCR_TEST__!.persistRequests = [
+                            ...(window.__OCR_TEST__!.persistRequests ?? []),
+                            { imageUrl: payload.image_url ?? '', payload },
+                        ];
+                    }
                     return new Response(
                         JSON.stringify({
                             img_width: 800,
@@ -189,9 +202,25 @@ const TestHarness = () => {
         };
         window.fetch = handleFetch;
 
+        const readerStore = getReaderStore();
+        readerStore.setManga({
+            id: 1,
+            title: 'Test Manga',
+            thumbnailUrl: '',
+            genres: [],
+            inLibrary: false,
+            realUrl: '',
+        } as never);
+        readerStore.chapters.setReaderStateChapters({
+            currentChapter: { id: 100, name: 'Test Chapter' },
+        } as never);
+        readerStore.pages.setPageUrls(PAGES.map((spec) => spec.imageUrl));
+        readerStore.pages.setCurrentPageIndex(0);
+
         window.__OCR_TEST__ = {
             ready: false,
             lines: [],
+            persistRequests: [],
             setVisible: (visible) => {
                 getReaderStore().ocr.setIsVisible(visible);
             },
@@ -203,6 +232,9 @@ const TestHarness = () => {
             },
             clearPages: () => {
                 useOcrStore.setState({ pages: {} });
+            },
+            setCurrentPage: (pageIndex) => {
+                getReaderStore().pages.setCurrentPageIndex(pageIndex);
             },
         };
 
@@ -226,6 +258,9 @@ const TestHarness = () => {
 
     return (
         <div data-testid="test-harness">
+            <Box sx={{ position: 'fixed', top: 8, right: 8, zIndex: 1000 }}>
+                <ReaderOcrButton />
+            </Box>
             {PAGES.map((spec) => (
                 <TestPage key={spec.pageIndex} spec={spec} onLines={(texts) => handleLines(spec.pageIndex, texts)} />
             ))}

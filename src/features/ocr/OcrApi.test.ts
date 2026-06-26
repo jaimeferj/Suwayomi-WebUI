@@ -86,4 +86,27 @@ describe('OcrApi', () => {
         expect(caught).toBeInstanceOf(OcrApiError);
         expect(caught).toMatchObject({ status: 503, message: 'engine loading' });
     });
+
+    it('forwards persist flag on /ocr/page requests', async () => {
+        const result: OcrPageResult = {
+            img_width: 800,
+            img_height: 1200,
+            cached: true,
+            backend: 'mokuro',
+            lines: [],
+        };
+        fetchMock.mockResolvedValueOnce(jsonResponse(200, result));
+
+        const api = new OcrApi({ endpoint: 'http://localhost:8765' });
+        await api.ocrPage({ manga_id: 'm1', chapter_id: 'c1', page_index: 7, persist: true });
+
+        const [firstCall] = fetchMock.mock.calls;
+        const [, init] = firstCall;
+        expect(JSON.parse(init?.body as string)).toEqual({
+            manga_id: 'm1',
+            chapter_id: 'c1',
+            page_index: 7,
+            persist: true,
+        });
+    });
 });

@@ -55,6 +55,7 @@ export interface OcrPageRequest {
     chapter_id?: string;
     page_index?: number;
     force?: boolean;
+    persist?: boolean;
 }
 
 export interface OcrRegionRequest {

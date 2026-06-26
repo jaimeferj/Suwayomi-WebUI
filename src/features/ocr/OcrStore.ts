@@ -40,6 +40,7 @@ export interface OcrStoreState {
     refreshStatus: () => Promise<void>;
     ensurePage: (key: PageKey, loader: () => Promise<OcrPageResult>) => Promise<void>;
     redoPage: (key: PageKey, loader: () => Promise<OcrPageResult>) => Promise<void>;
+    downloadPage: (key: PageKey, loader: () => Promise<OcrPageResult>) => Promise<void>;
     clearPage: (key: PageKey) => void;
     recognizeRegion: (key: string, loader: () => Promise<OcrRegionResult>) => Promise<void>;
     clearRegion: (key: string) => void;
@@ -170,6 +171,24 @@ export const useOcrStore = create<OcrStoreState>((set, get) => {
                         },
                     },
                 }));
+            }
+        },
+        downloadPage: async (key, loader) => {
+            set((prev) => ({ pages: { ...prev.pages, [key]: { status: 'loading' } } }));
+            try {
+                const result = await loader();
+                set((prev) => ({ pages: { ...prev.pages, [key]: { status: 'ready', result } } }));
+            } catch (error) {
+                set((prev) => ({
+                    pages: {
+                        ...prev.pages,
+                        [key]: {
+                            status: 'error',
+                            error: error instanceof Error ? error.message : String(error),
+                        },
+                    },
+                }));
+                throw error;
             }
         },
         clearPage: (key) => {

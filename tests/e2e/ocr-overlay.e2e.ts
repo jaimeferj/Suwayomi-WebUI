@@ -184,4 +184,35 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         expect(persisted?.enabled).toBe(true);
         expect(persisted?.endpoint).toBe('http://example.test:9999');
     });
+
+    test('Download OCR menu item sends persist=true on /ocr/page', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8765');
+            window.__OCR_TEST__!.setCurrentPage(1);
+        });
+
+        // Open the OCR menu and click "Download OCR for current page"
+        await page.locator('[aria-label="OCR menu"]').first().click();
+        await page.locator('[data-testid="ocr-download-page"]').click();
+
+        // Wait for the persist request to land
+        await page.waitForFunction(() => (window.__OCR_TEST__!.persistRequests?.length ?? 0) > 0, undefined, {
+            timeout: 5_000,
+        });
+
+        const persistRequests = await page.evaluate(() => window.__OCR_TEST__!.persistRequests ?? []);
+        expect(persistRequests).toHaveLength(1);
+        const request = persistRequests[0]!;
+        expect(request.imageUrl).toBe('/fixtures/02.jpg');
+        expect(request.payload).toMatchObject({
+            manga_id: '1',
+            chapter_id: '100',
+            page_index: 1,
+            persist: true,
+        });
+    });
 });

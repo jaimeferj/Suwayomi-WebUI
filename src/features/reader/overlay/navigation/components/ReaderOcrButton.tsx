@@ -14,12 +14,14 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import Checkbox from '@mui/material/Checkbox';
 import TranslateIcon from '@mui/icons-material/Translate';
 import CropFreeIcon from '@mui/icons-material/CropFree';
+import DownloadIcon from '@mui/icons-material/Download';
 import { memo, useCallback, useState } from 'react';
 import { useLingui } from '@lingui/react/macro';
 import { bindMenu, bindTrigger, usePopupState } from 'material-ui-popup-state/hooks';
 import { CustomTooltip } from '@/base/components/CustomTooltip.tsx';
-import { useReaderOcrStore } from '@/features/reader/stores/ReaderStore.ts';
+import { useReaderOcrStore, useReaderPagesStore, useReaderStore } from '@/features/reader/stores/ReaderStore.ts';
 import { OcrSettingsDialog } from '@/features/ocr/OcrSettingsDialog.tsx';
+import { useOcrStore, pageKey } from '@/features/ocr/OcrStore.ts';
 
 const BaseReaderOcrButton = () => {
     const { t } = useLingui();
@@ -30,6 +32,14 @@ const BaseReaderOcrButton = () => {
     const requestRedo = useReaderOcrStore((state) => state.requestRedo);
     const popupState = usePopupState({ variant: 'popover', popupId: 'reader-ocr-menu' });
     const [settingsOpen, setSettingsOpen] = useState(false);
+
+    const currentPageIndex = useReaderPagesStore((state) => state.currentPageIndex);
+    const pageUrls = useReaderPagesStore((state) => state.pageUrls);
+    const manga = useReaderStore((state) => state.manga);
+    const currentChapter = useReaderStore((state) => state.chapters.currentChapter);
+    const api = useOcrStore((state) => state.api);
+    const settings = useOcrStore((state) => state.settings);
+    const downloadPage = useOcrStore((state) => state.downloadPage);
 
     const handleSelectManual = useCallback(() => {
         setIsManualRegionMode(!isManualRegionMode);
@@ -45,6 +55,29 @@ const BaseReaderOcrButton = () => {
         setSettingsOpen(true);
         popupState.close();
     }, [popupState]);
+
+    const chapterId = currentChapter?.id != null ? String(currentChapter.id) : undefined;
+    const mangaId = manga?.id != null ? String(manga.id) : undefined;
+
+    const handleDownload = useCallback(() => {
+        const pageUrl = pageUrls[currentPageIndex];
+        if (!pageUrl) {
+            popupState.close();
+            return;
+        }
+        const key = pageKey(mangaId, chapterId, currentPageIndex);
+        void downloadPage(key, () =>
+            api.ocrPage({
+                image_url: pageUrl,
+                manga_id: mangaId,
+                chapter_id: chapterId,
+                page_index: currentPageIndex,
+                language: settings.language,
+                persist: true,
+            }),
+        );
+        popupState.close();
+    }, [api, chapterId, currentPageIndex, downloadPage, mangaId, pageUrls, popupState, settings.language]);
 
     return (
         <>
@@ -73,6 +106,16 @@ const BaseReaderOcrButton = () => {
                 </MenuItem>
                 <MenuItem onClick={handleRedo}>
                     <ListItemText inset>{t`Redo OCR for current page`}</ListItemText>
+                </MenuItem>
+                <MenuItem
+                    onClick={handleDownload}
+                    disabled={!pageUrls[currentPageIndex]}
+                    data-testid="ocr-download-page"
+                >
+                    <ListItemIcon>
+                        <DownloadIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>{t`Download OCR for current page`}</ListItemText>
                 </MenuItem>
                 <MenuItem onClick={handleSettings}>
                     <ListItemIcon>
