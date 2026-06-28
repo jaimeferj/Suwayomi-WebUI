@@ -44,7 +44,7 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         // Enable OCR + show overlay
         await page.evaluate(() => {
             window.__OCR_TEST__!.setEnabled(true);
-            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8765');
+            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8766');
             window.__OCR_TEST__!.setVisible(true);
         });
 
@@ -93,7 +93,7 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         await page.evaluate(() => {
             window.__OCR_TEST__!.clearPages();
             window.__OCR_TEST__!.setEnabled(true);
-            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8765');
+            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8766');
             window.__OCR_TEST__!.setVisible(true);
         });
 
@@ -191,7 +191,7 @@ test.describe('OCR overlay in front of manga reader UI', () => {
 
         await page.evaluate(() => {
             window.__OCR_TEST__!.setEnabled(true);
-            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8765');
+            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8766');
             window.__OCR_TEST__!.setCurrentPage(1);
         });
 
@@ -231,6 +231,7 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         await textBox.hover();
         const toolbar = page.getByTestId('ocr-learning-toolbar').first();
         await expect(toolbar).toBeVisible();
+        await expect(page.locator('.MuiTooltip-popper')).toHaveCount(0);
         const learnButton = toolbar.getByRole('button', { name: 'Learn' });
         const textBoxBounds = await textBox.boundingBox();
         const learnButtonBounds = await learnButton.boundingBox();
@@ -252,11 +253,138 @@ test.describe('OCR overlay in front of manga reader UI', () => {
             learnButtonBounds!.y + learnButtonBounds!.height / 2,
         );
 
-        await expect(page.getByRole('dialog')).toBeVisible();
+        await expect(page.getByRole('complementary', { name: 'AI learning panel' })).toBeVisible();
         await page.getByRole('button', { name: 'Grammar' }).click();
         await expect(page.getByText('Respuesta grammar')).toBeVisible();
 
         const navigationClicks = await page.evaluate(() => window.__OCR_TEST__!.navigationClicks);
         expect(navigationClicks).toBe(0);
+    });
+
+    test('AI learning controls are available by touch', async ({ browser }) => {
+        const context = await browser.newContext({
+            viewport: { width: 390, height: 844 },
+            hasTouch: true,
+            isMobile: true,
+        });
+        const page = await context.newPage();
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setAiEnabled(true);
+            window.__OCR_TEST__!.setVisible(true);
+        });
+        await waitForHarness(page);
+
+        const textBox = page.locator('[data-ocr-text]').first();
+        await textBox.tap();
+        const toolbar = page.getByTestId('ocr-learning-toolbar').first();
+        await expect(toolbar).toBeVisible();
+        await toolbar.getByRole('button', { name: 'Learn' }).tap();
+        await expect(page.getByRole('complementary', { name: 'AI learning panel' })).toBeVisible();
+        const learningModes = page.getByRole('group', { name: 'Learning mode' });
+        await expect(learningModes).toBeVisible();
+        const modeWidths = await learningModes.evaluate((element) => ({
+            client: element.clientWidth,
+            scroll: element.scrollWidth,
+        }));
+        expect(modeWidths.scroll).toBeLessThanOrEqual(modeWidths.client);
+        await expect(learningModes.getByRole('button')).toHaveCount(5);
+        expect(await page.evaluate(() => window.__OCR_TEST__!.navigationClicks)).toBe(0);
+
+        await context.close();
+    });
+
+    test('AI learning controls are keyboard accessible', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setAiEnabled(true);
+            window.__OCR_TEST__!.setVisible(true);
+        });
+        await waitForHarness(page);
+
+        const textBox = page.locator('[data-ocr-text]').first();
+        await textBox.focus();
+        const toolbar = page.getByTestId('ocr-learning-toolbar').first();
+        await expect(toolbar).toBeVisible();
+        await page.keyboard.press('Tab');
+        await expect(toolbar.getByRole('button', { name: 'Copy' })).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(toolbar.getByRole('button', { name: 'Learn' })).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(page.getByRole('complementary', { name: 'AI learning panel' })).toBeVisible();
+    });
+
+    test('AI learning request can recover from a transient failure', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setAiEnabled(true);
+            window.__OCR_TEST__!.setVisible(true);
+            window.__OCR_TEST__!.aiFailuresRemaining = 1;
+        });
+        await waitForHarness(page);
+
+        const textBox = page.locator('[data-ocr-text]').first();
+        await textBox.hover();
+        await page.getByTestId('ocr-learning-toolbar').first().getByRole('button', { name: 'Learn' }).click();
+        const panel = page.getByRole('complementary', { name: 'AI learning panel' });
+        await expect(panel.getByText('Temporary AI failure')).toBeVisible();
+        await panel.getByRole('button', { name: 'Retry' }).click();
+        await expect(panel.getByText('Respuesta translate')).toBeVisible();
+    });
+
+    test('AI learning panel remembers its width and collapsed state', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setAiEnabled(true);
+            window.__OCR_TEST__!.setVisible(true);
+        });
+        await waitForHarness(page);
+
+        const openPanel = async () => {
+            const textBox = page.locator('[data-ocr-text]').first();
+            await textBox.hover();
+            await page.getByTestId('ocr-learning-toolbar').first().getByRole('button', { name: 'Learn' }).click();
+            return page.getByRole('complementary', { name: 'AI learning panel' });
+        };
+
+        let panel = await openPanel();
+        const resizeHandle = page.getByRole('separator', { name: 'Resize AI learning panel' });
+        const initialBounds = await panel.boundingBox();
+        expect(initialBounds).not.toBeNull();
+        await resizeHandle.hover();
+        await page.mouse.down();
+        await page.mouse.move(initialBounds!.x + 80, initialBounds!.y + initialBounds!.height / 2);
+        await page.mouse.up();
+
+        const resizedBounds = await panel.boundingBox();
+        expect(resizedBounds).not.toBeNull();
+        expect(resizedBounds!.width).toBeLessThan(initialBounds!.width);
+        const storedWidth = await page.evaluate(() => Number(localStorage.getItem('ocr.ai-panel-width.v1')));
+        expect(storedWidth).toBeCloseTo(resizedBounds!.width, 0);
+
+        await panel.getByRole('button', { name: 'Collapse AI learning panel' }).click();
+        await expect(panel.getByRole('button', { name: 'Expand AI learning panel' })).toBeVisible();
+
+        await page.reload();
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setAiEnabled(true);
+            window.__OCR_TEST__!.setVisible(true);
+        });
+        await waitForHarness(page);
+        panel = await openPanel();
+        await expect(panel.getByRole('button', { name: 'Expand AI learning panel' })).toBeVisible();
+        await panel.getByRole('button', { name: 'Expand AI learning panel' }).click();
+        await expect(panel.getByRole('button', { name: 'Collapse AI learning panel' })).toBeVisible();
+        expect((await panel.boundingBox())?.width).toBeCloseTo(storedWidth, 0);
     });
 });

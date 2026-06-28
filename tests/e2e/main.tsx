@@ -27,6 +27,7 @@ declare global {
             lastRequest?: { imageUrl: string; payload: unknown };
             persistRequests?: Array<{ imageUrl: string; payload: unknown }>;
             navigationClicks: number;
+            aiFailuresRemaining: number;
             setVisible: (visible: boolean) => void;
             setEnabled: (enabled: boolean) => void;
             setAiEnabled: (enabled: boolean) => void;
@@ -206,6 +207,13 @@ const TestHarness = () => {
                 });
             }
             if (url.includes('/ai/learn') && init?.method === 'POST' && init.body) {
+                if (window.__OCR_TEST__!.aiFailuresRemaining > 0) {
+                    window.__OCR_TEST__!.aiFailuresRemaining -= 1;
+                    return new Response(JSON.stringify({ detail: 'Temporary AI failure' }), {
+                        status: 503,
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                }
                 const payload = JSON.parse(init.body as string) as { sentence: string; action: string };
                 return new Response(
                     JSON.stringify({
@@ -241,6 +249,7 @@ const TestHarness = () => {
             lines: [],
             persistRequests: [],
             navigationClicks: 0,
+            aiFailuresRemaining: 0,
             setVisible: (visible) => {
                 getReaderStore().ocr.setIsVisible(visible);
             },

@@ -53,7 +53,7 @@ export type AiProviderName = (typeof AI_PROVIDERS)[number];
 
 export const DEFAULT_SETTINGS: OcrSettings = {
     enabled: false,
-    endpoint: 'http://127.0.0.1:8765',
+    endpoint: 'http://127.0.0.1:8766',
     language: 'ja',
     showOnHover: true,
     autoDetect: true,

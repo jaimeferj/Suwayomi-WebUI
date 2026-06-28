@@ -910,6 +910,10 @@ msgstr "Client data"
 msgid "Close"
 msgstr "Close"
 
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Close AI learning panel"
+msgstr "Close AI learning panel"
+
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Cloudflare bypass"
 msgstr "Cloudflare bypass"
@@ -1664,6 +1668,10 @@ msgstr "Exit to manga page"
 #: src/features/reader/viewer/components/ReaderTransitionPage.tsx
 msgid "Exit to previous page"
 msgstr "Exit to previous page"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Expand AI learning panel"
+msgstr "Expand AI learning panel"
 
 #: src/features/ocr/OcrSettingsDialog.tsx
 msgid "Expression field"
