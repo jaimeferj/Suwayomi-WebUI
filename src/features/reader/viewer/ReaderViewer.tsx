@@ -272,7 +272,14 @@ const BaseReaderViewer = ({
                     }),
                 }),
             }}
-            onClick={(e) => !isDragging && ReaderControls.handleClick(scrollElementRef.current, e)}
+            onClick={(event) => {
+                const { target } = event;
+                const isReaderInteractive =
+                    target instanceof Element && target.closest('[data-reader-interactive="true"]');
+                if (!isDragging && !isReaderInteractive) {
+                    ReaderControls.handleClick(scrollElementRef.current, event);
+                }
+            }}
             onScroll={() =>
                 ReaderControls.updateCurrentPageOnScroll(
                     imageRefs,

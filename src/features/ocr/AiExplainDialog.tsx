@@ -7,14 +7,22 @@
  */
 
 import { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
+import AutoStoriesOutlinedIcon from '@mui/icons-material/AutoStoriesOutlined';
+import RecordVoiceOverOutlinedIcon from '@mui/icons-material/RecordVoiceOverOutlined';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import StyleOutlinedIcon from '@mui/icons-material/StyleOutlined';
+import TranslateOutlinedIcon from '@mui/icons-material/TranslateOutlined';
+import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Paper from '@mui/material/Paper';
+import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { useLingui } from '@lingui/react/macro';
 import { useOcrStore } from '@/features/ocr/OcrStore';
@@ -25,6 +33,7 @@ export interface AiExplainDialogProps {
     text: string;
     action: AiLearningAction;
     context?: AiLearningContext;
+    onActionChange: (action: AiLearningAction) => void;
     onClose: () => void;
 }
 
@@ -38,7 +47,22 @@ const TITLES: Record<AiLearningAction, string> = {
     cards: 'Cards',
 };
 
-export const AiExplainDialog = ({ open, text, action, context, onClose }: AiExplainDialogProps) => {
+const ACTION_ICONS: Record<AiLearningAction, React.ReactNode> = {
+    translate: <TranslateOutlinedIcon />,
+    grammar: <SchoolOutlinedIcon />,
+    vocabulary: <AutoStoriesOutlinedIcon />,
+    tone: <RecordVoiceOverOutlinedIcon />,
+    cards: <StyleOutlinedIcon />,
+};
+
+export const AiExplainDialog = ({
+    open,
+    text,
+    action,
+    context,
+    onActionChange,
+    onClose,
+}: AiExplainDialogProps) => {
     const { t } = useLingui();
     const settings = useOcrStore((state) => state.settings);
     const aiApi = useOcrStore((state) => state.aiApi);
@@ -81,39 +105,86 @@ export const AiExplainDialog = ({ open, text, action, context, onClose }: AiExpl
     }, [open, text, action, context, settings.aiEnabled, settings.aiLevel, aiApi]);
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-            <DialogTitle>{TITLES[action]}</DialogTitle>
-            <DialogContent>
-                <Stack sx={{ gap: 2, mt: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        {text}
+        <Dialog
+            open={open}
+            onClose={onClose}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            disableRestoreFocus
+            fullWidth
+            maxWidth="sm"
+            scroll="paper"
+            data-reader-interactive="true"
+        >
+            <DialogTitle sx={{ pb: 1 }}>{t`AI learning`}</DialogTitle>
+            <DialogContent dividers>
+                <Stack sx={{ gap: 2 }}>
+                    <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'action.hover' }}>
+                        <Typography lang="ja" sx={{ lineHeight: 1.7 }}>
+                            {text}
+                        </Typography>
+                    </Paper>
+                    <ToggleButtonGroup
+                        exclusive
+                        value={action}
+                        onChange={(_event, nextAction: AiLearningAction | null) => {
+                            if (nextAction) {
+                                onActionChange(nextAction);
+                            }
+                        }}
+                        aria-label={t`Learning mode`}
+                        sx={{
+                            alignSelf: 'stretch',
+                            overflowX: 'auto',
+                            '& .MuiToggleButton-root': {
+                                minWidth: 88,
+                                minHeight: 44,
+                                flex: '1 0 auto',
+                                gap: 0.75,
+                            },
+                        }}
+                    >
+                        {(Object.keys(TITLES) as AiLearningAction[]).map((option) => (
+                            <ToggleButton key={option} value={option} aria-label={TITLES[option]}>
+                                {ACTION_ICONS[option]}
+                                <Typography component="span" variant="button">
+                                    {TITLES[option]}
+                                </Typography>
+                            </ToggleButton>
+                        ))}
+                    </ToggleButtonGroup>
+                    <Typography variant="overline" color="text.secondary">
+                        {TITLES[action]}
                     </Typography>
                     {status === 'loading' && (
-                        <Stack sx={{ alignItems: 'center', py: 2 }}>
-                            <CircularProgress size={24} />
+                        <Stack aria-label={t`Loading AI explanation`} sx={{ gap: 1, minHeight: 180 }}>
+                            <Skeleton variant="rounded" height={52} />
+                            <Skeleton variant="rounded" height={72} />
+                            <Skeleton variant="rounded" height={52} />
                         </Stack>
                     )}
-                    {status === 'error' && (
-                        <Typography color="error.main" variant="body2">
-                            {error ?? t`AI request failed`}
-                        </Typography>
-                    )}
+                    {status === 'error' && <Alert severity="error">{error ?? t`AI request failed`}</Alert>}
                     {status === 'ready' && response && (
                         <Stack sx={{ gap: 2 }}>
                             {response.sections.map((section) => (
-                                <Box key={`${section.label}-${section.content}`}>
-                                    <Typography variant="subtitle2">{section.label}</Typography>
-                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                <Paper
+                                    key={`${section.label}-${section.content}`}
+                                    component="section"
+                                    variant="outlined"
+                                    sx={{ p: 2 }}
+                                >
+                                    <Typography variant="subtitle2" color="primary.main" sx={{ mb: 0.75 }}>
+                                        {section.label}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                                         {section.content}
                                     </Typography>
-                                </Box>
+                                </Paper>
                             ))}
                         </Stack>
                     )}
                     {!settings.aiEnabled && (
-                        <Typography color="warning.main" variant="body2">
-                            {t`AI is disabled. Configure it in the OCR settings panel.`}
-                        </Typography>
+                        <Alert severity="warning">{t`AI is disabled. Configure it in the OCR settings panel.`}</Alert>
                     )}
                 </Stack>
             </DialogContent>

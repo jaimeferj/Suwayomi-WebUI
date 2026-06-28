@@ -215,4 +215,48 @@ test.describe('OCR overlay in front of manga reader UI', () => {
             persist: true,
         });
     });
+
+    test('AI learning controls do not trigger reader navigation', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setAiEnabled(true);
+            window.__OCR_TEST__!.setVisible(true);
+        });
+        await waitForHarness(page);
+
+        const textBox = page.locator('[data-ocr-text]').first();
+        await textBox.hover();
+        const toolbar = page.getByTestId('ocr-learning-toolbar').first();
+        await expect(toolbar).toBeVisible();
+        const learnButton = toolbar.getByRole('button', { name: 'Learn' });
+        const textBoxBounds = await textBox.boundingBox();
+        const learnButtonBounds = await learnButton.boundingBox();
+        expect(learnButtonBounds?.height).toBeGreaterThanOrEqual(44);
+        expect(textBoxBounds).not.toBeNull();
+        expect(learnButtonBounds).not.toBeNull();
+        await page.mouse.move(
+            textBoxBounds!.x + textBoxBounds!.width / 2,
+            textBoxBounds!.y + textBoxBounds!.height / 2,
+        );
+        await page.mouse.move(
+            learnButtonBounds!.x + learnButtonBounds!.width / 2,
+            learnButtonBounds!.y + learnButtonBounds!.height / 2,
+            { steps: 10 },
+        );
+        await expect(toolbar).toBeVisible();
+        await page.mouse.click(
+            learnButtonBounds!.x + learnButtonBounds!.width / 2,
+            learnButtonBounds!.y + learnButtonBounds!.height / 2,
+        );
+
+        await expect(page.getByRole('dialog')).toBeVisible();
+        await page.getByRole('button', { name: 'Grammar' }).click();
+        await expect(page.getByText('Respuesta grammar')).toBeVisible();
+
+        const navigationClicks = await page.evaluate(() => window.__OCR_TEST__!.navigationClicks);
+        expect(navigationClicks).toBe(0);
+    });
 });

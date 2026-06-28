@@ -26,8 +26,10 @@ declare global {
             lines: string[];
             lastRequest?: { imageUrl: string; payload: unknown };
             persistRequests?: Array<{ imageUrl: string; payload: unknown }>;
+            navigationClicks: number;
             setVisible: (visible: boolean) => void;
             setEnabled: (enabled: boolean) => void;
+            setAiEnabled: (enabled: boolean) => void;
             setEndpoint: (endpoint: string) => void;
             clearPages: () => void;
             setCurrentPage: (pageIndex: number) => void;
@@ -126,6 +128,11 @@ const TestPage = ({ spec, onLines }: { spec: PageSpec; onLines: (texts: string[]
             ref={wrapperRef}
             data-testid={`page-${spec.pageIndex}`}
             data-page-url={spec.imageUrl}
+            onClick={() => {
+                if (window.__OCR_TEST__) {
+                    window.__OCR_TEST__.navigationClicks += 1;
+                }
+            }}
             sx={{ position: 'relative', display: 'inline-block', m: 2 }}
         >
             <img
@@ -198,6 +205,18 @@ const TestHarness = () => {
                     headers: { 'Content-Type': 'application/json' },
                 });
             }
+            if (url.includes('/ai/learn') && init?.method === 'POST' && init.body) {
+                const payload = JSON.parse(init.body as string) as { sentence: string; action: string };
+                return new Response(
+                    JSON.stringify({
+                        provider: 'mock',
+                        action: payload.action,
+                        sentence: payload.sentence,
+                        sections: [{ label: 'Resultado', content: `Respuesta ${payload.action}` }],
+                    }),
+                    { status: 200, headers: { 'Content-Type': 'application/json' } },
+                );
+            }
             return realFetch(input, init);
         };
         window.fetch = handleFetch;
@@ -221,11 +240,15 @@ const TestHarness = () => {
             ready: false,
             lines: [],
             persistRequests: [],
+            navigationClicks: 0,
             setVisible: (visible) => {
                 getReaderStore().ocr.setIsVisible(visible);
             },
             setEnabled: (enabled) => {
                 useOcrStore.getState().setSettings({ enabled });
+            },
+            setAiEnabled: (enabled) => {
+                useOcrStore.getState().setSettings({ aiEnabled: enabled });
             },
             setEndpoint: (endpoint) => {
                 useOcrStore.getState().setSettings({ endpoint });

@@ -7,9 +7,13 @@
  */
 
 import { memo, useCallback, useMemo, useState } from 'react';
+import AddCardOutlinedIcon from '@mui/icons-material/AddCardOutlined';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import ButtonGroup from '@mui/material/ButtonGroup';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import type { OcrLine } from '@/features/ocr/Ocr.types';
 import type { AiLearningAction } from '@/features/ocr/AiApi';
@@ -45,6 +49,10 @@ const OcrTextBoxBase = ({
         }
     }, [line.text]);
 
+    const stopReaderNavigation = useCallback((event: React.SyntheticEvent) => {
+        event.stopPropagation();
+    }, []);
+
     const layout = getOcrTextLayout({
         text: line.text,
         box: {
@@ -66,6 +74,8 @@ const OcrTextBoxBase = ({
             <Box
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
+                onClick={stopReaderNavigation}
+                onPointerDown={stopReaderNavigation}
                 sx={{
                     position: 'absolute',
                     left: `${line.tightBoundingBox.x * 100}%`,
@@ -90,6 +100,7 @@ const OcrTextBoxBase = ({
                 data-ocr-columns={layout.columnCount}
                 data-ocr-side-margin={layout.sideMargin}
                 data-ocr-column-gap={layout.columnGap}
+                data-reader-interactive="true"
             >
                 {columns.map((col, idx) => (
                     <Box
@@ -115,44 +126,53 @@ const OcrTextBoxBase = ({
                     </Box>
                 ))}
                 {hovered && (
-                    <ButtonGroup
-                        size="small"
-                        variant="contained"
+                    <Paper
+                        elevation={8}
                         sx={{
                             position: 'absolute',
                             top: 0,
                             right: 0,
-                            transform: isVertical ? 'rotate(90deg)' : 'none',
-                            transformOrigin: 'top right',
-                            zIndex: 1,
+                            transform: 'translateY(-100%)',
+                            zIndex: 10,
+                            borderRadius: 2,
+                            overflow: 'hidden',
                         }}
+                        data-testid="ocr-learning-toolbar"
                     >
-                        <Button onClick={handleCopy}>Copy</Button>
-                        {ankiEnabled && (
-                            <Button onClick={onCreateAnkiCard} disabled={!onCreateAnkiCard}>
-                                Anki
+                        <Stack direction="row" sx={{ p: 0.5, gap: 0.5 }}>
+                            <Button
+                                size="small"
+                                startIcon={<ContentCopyOutlinedIcon />}
+                                onClick={handleCopy}
+                                sx={{ minHeight: 44 }}
+                            >
+                                Copy
                             </Button>
-                        )}
-                        {aiEnabled && (
-                            <>
-                                <Button onClick={() => onLearn?.('translate')} disabled={!onLearn}>
-                                    Translate
+                            {ankiEnabled && (
+                                <Button
+                                    size="small"
+                                    startIcon={<AddCardOutlinedIcon />}
+                                    onClick={onCreateAnkiCard}
+                                    disabled={!onCreateAnkiCard}
+                                    sx={{ minHeight: 44 }}
+                                >
+                                    Anki
                                 </Button>
-                                <Button onClick={() => onLearn?.('grammar')} disabled={!onLearn}>
-                                    Grammar
+                            )}
+                            {aiEnabled && (
+                                <Button
+                                    size="small"
+                                    variant="contained"
+                                    startIcon={<SchoolOutlinedIcon />}
+                                    onClick={() => onLearn?.('translate')}
+                                    disabled={!onLearn}
+                                    sx={{ minHeight: 44 }}
+                                >
+                                    Learn
                                 </Button>
-                                <Button onClick={() => onLearn?.('vocabulary')} disabled={!onLearn}>
-                                    Vocab
-                                </Button>
-                                <Button onClick={() => onLearn?.('tone')} disabled={!onLearn}>
-                                    Tone
-                                </Button>
-                                <Button onClick={() => onLearn?.('cards')} disabled={!onLearn}>
-                                    Cards
-                                </Button>
-                            </>
-                        )}
-                    </ButtonGroup>
+                            )}
+                        </Stack>
+                    </Paper>
                 )}
             </Box>
         </Tooltip>

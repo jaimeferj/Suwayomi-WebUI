@@ -114,7 +114,13 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
                     chapterTitle={chapterTitle}
                     pageIndex={pageIndex}
                 />
-                <AiExplainDialog open={false} text="" action="translate" onClose={handleExplainClose} />
+                <AiExplainDialog
+                    open={false}
+                    text=""
+                    action="translate"
+                    onActionChange={() => undefined}
+                    onClose={handleExplainClose}
+                />
             </>
         );
     }
@@ -191,6 +197,9 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
                 text={learningRequest?.line.text ?? ''}
                 action={learningRequest?.action ?? 'translate'}
                 context={learningRequest?.context}
+                onActionChange={(action) =>
+                    setLearningRequest((request) => (request ? { ...request, action } : request))
+                }
                 onClose={handleExplainClose}
             />
         </>

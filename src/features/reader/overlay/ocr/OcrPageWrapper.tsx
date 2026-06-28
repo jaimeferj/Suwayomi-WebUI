@@ -54,6 +54,9 @@ const OcrPageWrapperBase = ({
             sx={{
                 position: 'relative',
                 display: 'inline-block',
+                flex: '0 0 auto',
+                maxWidth: '100%',
+                verticalAlign: 'top',
                 lineHeight: 0,
             }}
         >
