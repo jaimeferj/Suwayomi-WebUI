@@ -32,6 +32,8 @@ export interface OcrTextLayout {
     columnGap: number;
     sideMargin: number;
     columns?: OcrColumn[];
+    lineBoxWidth?: number;
+    lineBoxHeight?: number;
 }
 
 const MIN_FONT_SIZE = 1;
@@ -40,8 +42,21 @@ const MIN_COLUMN_GAP_PX = 2;
 const MAX_COLUMN_COUNT = 12;
 const MIN_COLUMN_COUNT = 1;
 
-const GAP_RATIO = 0.1;
-const SIDE_MARGIN_RATIO = 0.06;
+// Geometry knobs. We avoid box-width ratios for gaps/margins so that the
+// 8–9 column regression doesn't lose all its room to a 10%-of-box gap that
+// scales with the very dimension we're trying to pack.
+const COLUMN_LINE_BOX_WIDTH_RATIO = 1.05; // vertical line box width per em (Japanese ink + bearing)
+const COLUMN_LINE_BOX_HEIGHT_RATIO = 1.2; // vertical line box height per em (Japanese ink + leading)
+const FIXED_COLUMN_GAP_PX = 4; // safe between-column gap, independent of box width
+const FIXED_SIDE_MARGIN_PX = 2; // safe side inset, independent of box width
+const METRIC_QUANTUM_PX = 0.5; // round to 0.5 px to avoid subpixel blur
+
+function quantize(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+    return Math.max(0, Math.round(value / METRIC_QUANTUM_PX) * METRIC_QUANTUM_PX);
+}
 
 function graphemeLength(text: string): number {
     return Math.max([...text].length, 1);
@@ -174,6 +189,9 @@ export interface VerticalLayoutMetrics {
     fontSize: number;
     columnGap: number;
     sideMargin: number;
+    lineBoxWidth: number;
+    lineBoxHeight: number;
+    totalColumnWidth: number;
 }
 
 function computeVerticalLayout(
@@ -184,51 +202,67 @@ function computeVerticalLayout(
     const maxColumnLength = Math.max(...columns.map((col) => graphemeLength(col.text)), 1);
     const columnsCount = Math.max(columns.length, 1);
 
-    const byHeight = box.height / maxColumnLength;
-
     const minGap = MIN_COLUMN_GAP_PX;
     const minSideMargin = MIN_COLUMN_GAP_PX;
-    const targetGap = columnsCount > 1 ? Math.max(minGap, box.width * GAP_RATIO) : 0;
-    const targetSideMargin = columnsCount > 1 ? Math.max(minSideMargin, box.width * SIDE_MARGIN_RATIO) : 0;
+    const targetGap = columnsCount > 1 ? Math.max(minGap, FIXED_COLUMN_GAP_PX) : 0;
+    const targetSideMargin = columnsCount > 1 ? Math.max(minSideMargin, FIXED_SIDE_MARGIN_PX) : 0;
 
-    const byWidth = Math.max(
-        MIN_FONT_SIZE,
-        (box.width - 2 * targetSideMargin - (columnsCount - 1) * targetGap) / Math.max(columnsCount, 1),
-    );
+    // For a single column the column's "line box" exactly equals the column
+    // width, so the font can fill the box (preserving the long-standing
+    // 1-column behavior). For multi-column we reserve a small ink-safe
+    // horizontal ratio so vertical Japanese glyphs don't kiss the gap/inset.
+    const lineBoxWidthRatio = columnsCount > 1 ? COLUMN_LINE_BOX_WIDTH_RATIO : 1;
+    const lineBoxHeightRatio = columnsCount > 1 ? COLUMN_LINE_BOX_HEIGHT_RATIO : 1;
+    const availableWidth =
+        columnsCount > 1 ? box.width - 2 * targetSideMargin - (columnsCount - 1) * targetGap : box.width;
+    const byWidth = availableWidth / Math.max(columnsCount * lineBoxWidthRatio, lineBoxWidthRatio);
+    const byHeight = box.height / Math.max(maxColumnLength * lineBoxHeightRatio, lineBoxHeightRatio);
 
-    let fontSize = Math.min(byHeight, byWidth);
-
-    const minUsedWidth = columnsCount * fontSize + (columnsCount - 1) * targetGap + 2 * targetSideMargin;
-    const remaining = box.width - minUsedWidth;
-
-    let columnGap = targetGap;
-    let sideMargin = targetSideMargin;
-
-    if (remaining > 0) {
-        const gapExtra = columnsCount > 1 ? (remaining * 0.6) / (columnsCount - 1) : 0;
-        const sideExtra = (remaining * 0.4) / 2;
-        columnGap += gapExtra;
-        sideMargin += sideExtra;
-    } else if (remaining < 0) {
-        const deficit = -remaining;
-        const gapReduction = Math.min(deficit, Math.max(columnGap - minGap, 0) * (columnsCount - 1));
-        columnGap -= gapReduction / Math.max(columnsCount - 1, 1);
-        const remainingDeficit = deficit - gapReduction;
-        const sideReduction = Math.min(remainingDeficit, Math.max(sideMargin - minSideMargin, 0) * 2);
-        sideMargin -= sideReduction / 2;
-    }
-
+    let fontSize = Math.min(byWidth, byHeight);
     fontSize = Math.max(MIN_FONT_SIZE, fontSize);
 
     if (typeof blockFontSize === 'number' && blockFontSize > 0) {
-        fontSize = Math.min(blockFontSize, Math.max(fontSize, MIN_FONT_SIZE));
+        fontSize = Math.min(blockFontSize, fontSize);
+    }
+
+    fontSize = quantize(fontSize);
+    if (fontSize < MIN_FONT_SIZE) {
+        fontSize = MIN_FONT_SIZE;
+    }
+
+    const lineBoxWidth = quantize(fontSize * COLUMN_LINE_BOX_WIDTH_RATIO);
+    const lineBoxHeight = quantize(fontSize * COLUMN_LINE_BOX_HEIGHT_RATIO);
+    const totalColumnWidth = columnsCount * lineBoxWidth + (columnsCount - 1) * targetGap + 2 * targetSideMargin;
+
+    let columnGap = targetGap;
+    let sideMargin = targetSideMargin;
+    const deficit = totalColumnWidth - box.width;
+    if (deficit > 0) {
+        // Trim gaps first, then side margins, until we fit the box. We never
+        // shrink the columns themselves; the column count is fixed.
+        const gapShrinkBudget = (columnGap - minGap) * Math.max(columnsCount - 1, 0);
+        const sideShrinkBudget = (sideMargin - minSideMargin) * 2;
+        const gapShrink = Math.min(deficit, gapShrinkBudget);
+        columnGap -= gapShrink / Math.max(columnsCount - 1, 1);
+        const sideShrink = Math.min(deficit - gapShrink, sideShrinkBudget);
+        sideMargin -= sideShrink / 2;
     }
 
     return {
         fontSize,
         columnGap: columnsCount > 1 ? columnGap : 0,
         sideMargin,
+        lineBoxWidth,
+        lineBoxHeight,
+        totalColumnWidth,
     };
+}
+
+function isSingleSourceLine(sourceLines: ReadonlyArray<string> | null | undefined, text: string): boolean {
+    if (sourceLines && sourceLines.length > 0) {
+        return sourceLines.length === 1;
+    }
+    return textLines(text).length === 1;
 }
 
 export function getOcrTextLayout(input: OcrLayoutInput): OcrTextLayout {
@@ -241,27 +275,45 @@ export function getOcrTextLayout(input: OcrLayoutInput): OcrTextLayout {
     const lines = textLines(text);
     const aspectRatio = box.width / box.height;
     const forcedVertical = input.forcedOrientation === 'vertical';
+    const forcedHorizontal = input.forcedOrientation === 'horizontal';
 
     const columns = normalizeColumns(text, box, input.sourceLines ?? null, input.forcedOrientation ?? null);
 
+    const verticalMetrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
+
+    // Intentional exception: a clearly wide, single-line Japanese source
+    // (e.g. "すいませ〜ん！！") should still render horizontally even when
+    // vertical is forced, because a vertical column of N glyphs in a 193×21
+    // box would not be readable. Gated on a single source line so multi-line
+    // vertical sources are never collapsed into a single horizontal line.
+    if (forcedVertical && isSingleSourceLine(input.sourceLines ?? null, text) && aspectRatio >= 2.5) {
+        if (horizontalSize >= verticalMetrics.fontSize * 0.6) {
+            return {
+                orientation: 'horizontal',
+                fontSize: horizontalSize,
+                columnCount: 1,
+                columnGap: 0,
+                sideMargin: 0,
+            };
+        }
+    }
+
     if (lines.length > 1 && containsCjk(text)) {
-        const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
-        if (metrics.fontSize >= horizontalSize * 0.75) {
+        if (verticalMetrics.fontSize >= horizontalSize * 0.75) {
             return {
                 orientation: 'vertical',
-                fontSize: metrics.fontSize,
+                fontSize: verticalMetrics.fontSize,
                 columnCount: columns.length,
-                columnGap: metrics.columnGap,
-                sideMargin: metrics.sideMargin,
+                columnGap: verticalMetrics.columnGap,
+                sideMargin: verticalMetrics.sideMargin,
+                lineBoxWidth: verticalMetrics.lineBoxWidth,
+                lineBoxHeight: verticalMetrics.lineBoxHeight,
                 columns,
             };
         }
     }
 
-    if (
-        aspectRatio >= 2.5 &&
-        horizontalSize >= computeVerticalLayout(box, columns, input.blockFontSize ?? null).fontSize * 0.6
-    ) {
+    if (aspectRatio >= 2.5 && horizontalSize >= verticalMetrics.fontSize * 0.6) {
         return {
             orientation: 'horizontal',
             fontSize: horizontalSize,
@@ -272,32 +324,50 @@ export function getOcrTextLayout(input: OcrLayoutInput): OcrTextLayout {
     }
 
     if (aspectRatio <= 0.6 && (forcedVertical || containsCjk(text))) {
-        const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
         return {
             orientation: 'vertical',
-            fontSize: metrics.fontSize,
+            fontSize: verticalMetrics.fontSize,
             columnCount: columns.length,
-            columnGap: metrics.columnGap,
-            sideMargin: metrics.sideMargin,
+            columnGap: verticalMetrics.columnGap,
+            sideMargin: verticalMetrics.sideMargin,
+            lineBoxWidth: verticalMetrics.lineBoxWidth,
+            lineBoxHeight: verticalMetrics.lineBoxHeight,
             columns,
         };
     }
 
     if (forcedVertical) {
-        const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
-        if (metrics.fontSize >= horizontalSize * 0.85) {
+        if (verticalMetrics.fontSize >= horizontalSize * 0.85) {
             return {
                 orientation: 'vertical',
-                fontSize: metrics.fontSize,
+                fontSize: verticalMetrics.fontSize,
                 columnCount: columns.length,
-                columnGap: metrics.columnGap,
-                sideMargin: metrics.sideMargin,
+                columnGap: verticalMetrics.columnGap,
+                sideMargin: verticalMetrics.sideMargin,
+                lineBoxWidth: verticalMetrics.lineBoxWidth,
+                lineBoxHeight: verticalMetrics.lineBoxHeight,
+                columns,
+            };
+        }
+        // Forced vertical with multiple source columns is honored: render
+        // vertical rather than collapsing to a single horizontal line. This
+        // preserves multi-column vertical sources like the 8-column
+        // regression in vertical orientation.
+        if (columns.length > 1) {
+            return {
+                orientation: 'vertical',
+                fontSize: verticalMetrics.fontSize,
+                columnCount: columns.length,
+                columnGap: verticalMetrics.columnGap,
+                sideMargin: verticalMetrics.sideMargin,
+                lineBoxWidth: verticalMetrics.lineBoxWidth,
+                lineBoxHeight: verticalMetrics.lineBoxHeight,
                 columns,
             };
         }
     }
 
-    if (horizontalSize >= computeVerticalLayout(box, columns, input.blockFontSize ?? null).fontSize) {
+    if (forcedHorizontal || horizontalSize >= verticalMetrics.fontSize) {
         return {
             orientation: 'horizontal',
             fontSize: horizontalSize,
@@ -306,13 +376,14 @@ export function getOcrTextLayout(input: OcrLayoutInput): OcrTextLayout {
             sideMargin: 0,
         };
     }
-    const metrics = computeVerticalLayout(box, columns, input.blockFontSize ?? null);
     return {
         orientation: 'vertical',
-        fontSize: metrics.fontSize,
+        fontSize: verticalMetrics.fontSize,
         columnCount: columns.length,
-        columnGap: metrics.columnGap,
-        sideMargin: metrics.sideMargin,
+        columnGap: verticalMetrics.columnGap,
+        sideMargin: verticalMetrics.sideMargin,
+        lineBoxWidth: verticalMetrics.lineBoxWidth,
+        lineBoxHeight: verticalMetrics.lineBoxHeight,
         columns,
     };
 }

@@ -112,9 +112,11 @@ describe('getOcrTextLayout', () => {
         expect(layout.columnCount).toBeGreaterThan(1);
         expect(layout.columnGap).toBeGreaterThan(0);
         expect(layout.sideMargin).toBeGreaterThan(0);
+        const columnWidth = layout.lineBoxWidth ?? layout.fontSize;
         const totalWidth =
-            layout.columnCount * layout.fontSize + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
-        expect(totalWidth).toBeCloseTo(200, 1);
+            layout.columnCount * columnWidth + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
+        expect(totalWidth).toBeLessThanOrEqual(200);
+        expect(layout.fontSize).toBeGreaterThan(0);
     });
 
     it('splits vertical CJK text on whitespace into separate columns', () => {
@@ -130,9 +132,10 @@ describe('getOcrTextLayout', () => {
         expect(layout.fontSize).toBeGreaterThan(0);
         expect(layout.columnGap).toBeGreaterThan(0);
         expect(layout.sideMargin).toBeGreaterThanOrEqual(0);
+        const columnWidth = layout.lineBoxWidth ?? layout.fontSize;
         const totalWidth =
-            layout.columnCount * layout.fontSize + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
-        expect(totalWidth).toBeCloseTo(80, 1);
+            layout.columnCount * columnWidth + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
+        expect(totalWidth).toBeLessThanOrEqual(80);
     });
 
     it('does not split on whitespace when the box is wider than tall', () => {
@@ -157,5 +160,47 @@ describe('getOcrTextLayout', () => {
         expect(layout.columnCount).toBe(2);
         expect(layout.columns?.[0].text).toBe('王は');
         expect(layout.columns?.[1].text).toBe('誰だ？');
+    });
+
+    it('keeps the 8-column forced-vertical regression vertical with 8 readable columns', () => {
+        const regressionText = 'けった のは ぼくだ けど、 ボールの 持ち主は おま えだ。';
+        const sourceLines = ['けった', 'のは', 'ぼくだ', 'けど、', 'ボールの', '持ち主は', 'おま', 'えだ。'];
+        const layout = getOcrTextLayout({
+            text: regressionText,
+            box: { width: 200, height: 240 },
+            forcedOrientation: 'vertical',
+            sourceLines,
+            blockFontSize: 28,
+        });
+
+        expect(layout.orientation).toBe('vertical');
+        expect(layout.columnCount).toBe(8);
+        expect(layout.columns?.map((col) => col.text)).toEqual(sourceLines);
+        expect(layout.columns?.length).toBe(8);
+
+        const reconstructed = layout.columns?.map((col) => col.text).join('') ?? '';
+        const strippedOriginal = regressionText.replaceAll(/\s+/g, '');
+        expect(reconstructed.replaceAll(/\s+/g, '')).toBe(strippedOriginal);
+
+        expect(layout.fontSize).toBeGreaterThanOrEqual(20);
+        expect(layout.fontSize).toBeLessThanOrEqual(28);
+
+        expect(Number.isFinite(layout.fontSize)).toBe(true);
+        expect(Number.isFinite(layout.columnGap)).toBe(true);
+        expect(Number.isFinite(layout.sideMargin)).toBe(true);
+        expect(layout.fontSize).toBeGreaterThan(0);
+        expect(layout.columnGap).toBeGreaterThanOrEqual(0);
+        expect(layout.sideMargin).toBeGreaterThanOrEqual(0);
+
+        const columnWidth = layout.lineBoxWidth ?? layout.fontSize;
+        const longestColumn = Math.max(...(layout.columns ?? []).map((col) => [...col.text].length));
+        const fittedWidth =
+            layout.columnCount * columnWidth + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
+        expect(fittedWidth).toBeLessThanOrEqual(200);
+        const fittedHeight = longestColumn * (layout.lineBoxHeight ?? layout.fontSize);
+        expect(fittedHeight).toBeLessThanOrEqual(240);
+
+        expect(layout.lineBoxWidth).toBeGreaterThan(0);
+        expect(layout.lineBoxHeight).toBeGreaterThan(0);
     });
 });

@@ -34,6 +34,7 @@ declare global {
             setEndpoint: (endpoint: string) => void;
             clearPages: () => void;
             setCurrentPage: (pageIndex: number) => void;
+            scrollAllIntoView: () => void;
         };
     }
 }
@@ -74,19 +75,28 @@ const PAGES: PageSpec[] = [
         vertical: true,
         box: { x: 0.55, y: 0.1, width: 0.25, height: 0.8 },
     },
+    {
+        pageIndex: 3,
+        imageUrl: '/fixtures/02.jpg',
+        mockText: 'けった のは ぼくだ けど、 ボールの 持ち主は おま えだ。',
+        mockColumns: ['けった', 'のは', 'ぼくだ', 'けど、', 'ボールの', '持ち主は', 'おま', 'えだ。'],
+        vertical: true,
+        box: { x: 0.05, y: 0.05, width: 0.9, height: 0.9 },
+    },
 ];
 
 function mockLine(spec: PageSpec) {
     if (spec.vertical) {
         const box = spec.box ?? { x: 0.55, y: 0.1, width: 0.25, height: 0.8 };
         const sourceLines = spec.mockColumns ?? spec.mockText.split(/\s+/).filter(Boolean);
+        const blockFontSize = spec.pageIndex === 3 ? 28 : 24;
         return {
             text: spec.mockText,
             tightBoundingBox: box,
             forcedOrientation: 'vertical' as const,
             isMerged: false,
             sourceLines,
-            blockFontSize: 24,
+            blockFontSize,
         };
     }
     const y = spec.pageIndex === 0 ? 0.15 : 0.2;
@@ -244,6 +254,23 @@ const TestHarness = () => {
         readerStore.pages.setPageUrls(PAGES.map((spec) => spec.imageUrl));
         readerStore.pages.setCurrentPageIndex(0);
 
+        // Scroll each fixture page into view once on init so OCR fires
+        // for every page even when the viewport can only show a couple at
+        // a time. Without this, `__OCR_TEST__.ready` would never become
+        // true for off-screen pages and existing tests would time out.
+        const initialScrollTimer = window.setTimeout(() => {
+            PAGES.forEach((spec) => {
+                const el = document.querySelector(`[data-testid="page-${spec.pageIndex}"]`);
+                if (el) {
+                    el.scrollIntoView({ block: 'center', inline: 'center' });
+                }
+            });
+            window.setTimeout(() => {
+                window.scrollTo(0, 0);
+            }, 200);
+        }, 100);
+        window.addEventListener('beforeunload', () => window.clearTimeout(initialScrollTimer));
+
         window.__OCR_TEST__ = {
             ready: false,
             lines: [],
@@ -268,6 +295,14 @@ const TestHarness = () => {
             setCurrentPage: (pageIndex) => {
                 getReaderStore().pages.setCurrentPageIndex(pageIndex);
             },
+            scrollAllIntoView: () => {
+                PAGES.forEach((spec) => {
+                    const el = document.querySelector(`[data-testid="page-${spec.pageIndex}"]`);
+                    if (el) {
+                        el.scrollIntoView({ block: 'center', inline: 'center' });
+                    }
+                });
+            },
         };
 
         return () => {
@@ -284,7 +319,11 @@ const TestHarness = () => {
         const flat = ([] as string[]).concat(...Object.values(linesRef.current));
         if (window.__OCR_TEST__) {
             window.__OCR_TEST__.lines = flat;
-            window.__OCR_TEST__.ready = flat.length >= PAGES.length;
+            // `ready` is true once every fixture page has produced at least
+            // one line, so a viewport that can only show a couple of pages
+            // at a time still gets past `waitForHarness` as each page
+            // scrolls in.
+            window.__OCR_TEST__.ready = Object.keys(linesRef.current).length >= PAGES.length;
         }
     };
 

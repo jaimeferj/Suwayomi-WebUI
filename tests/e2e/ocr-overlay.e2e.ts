@@ -387,4 +387,167 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         await expect(panel.getByRole('button', { name: 'Collapse AI learning panel' })).toBeVisible();
         expect((await panel.boundingBox())?.width).toBeCloseTo(storedWidth, 0);
     });
+
+    test('renders the 8-column forced-vertical regression as 8 right-to-left vertical columns that fit the box', async ({
+        page,
+    }) => {
+        const regressionText = 'けった のは ぼくだ けど、 ボールの 持ち主は おま えだ。';
+        const expectedColumns = ['けった', 'のは', 'ぼくだ', 'けど、', 'ボールの', '持ち主は', 'おま', 'えだ。'];
+
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.clearPages();
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setEndpoint('http://127.0.0.1:8766');
+            window.__OCR_TEST__!.setVisible(true);
+        });
+
+        await scrollPageIntoView(page, 3);
+
+        await page.waitForFunction(
+            (needle) => {
+                const lines = window.__OCR_TEST__?.lines ?? [];
+                return lines.some((text) => text.includes(needle));
+            },
+            regressionText,
+            { timeout: 30_000 },
+        );
+
+        await page.waitForSelector('[data-testid="page-3"] [data-ocr-text]', { timeout: 10_000 });
+
+        const pageLocator = page.locator('[data-testid="page-3"]');
+        const textBox = pageLocator.locator('[data-ocr-text]').first();
+        await expect(textBox).toBeVisible();
+        await expect(textBox).toHaveAttribute('data-ocr-orientation', 'vertical');
+        await expect(textBox).toHaveAttribute('data-ocr-columns', '8');
+        await expect(textBox).not.toHaveAttribute('data-ocr-orientation', 'horizontal');
+
+        const overlayText = (await textBox.textContent())?.replaceAll(/\s+/g, '') ?? '';
+        const expectedText = regressionText.replaceAll(/\s+/g, '');
+        expect(overlayText).toBe(expectedText);
+
+        const columnTexts = await pageLocator
+            .locator('[data-ocr-column]')
+            .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-ocr-column-text') ?? ''));
+        expect(columnTexts).toEqual(expectedColumns);
+
+        const columnRects = await pageLocator.locator('[data-ocr-column]').evaluateAll((nodes) =>
+            nodes.map((node) => {
+                const r = node.getBoundingClientRect();
+                return { x: r.x, y: r.y, width: r.width, height: r.height };
+            }),
+        );
+        for (let i = 1; i < columnRects.length; i += 1) {
+            expect(columnRects[i].x).toBeLessThan(columnRects[i - 1].x);
+        }
+        expect(columnRects[0].x).toBeGreaterThan(columnRects[columnRects.length - 1].x);
+
+        const styles = await pageLocator.locator('[data-ocr-column]').evaluateAll((nodes) =>
+            nodes.map((node) => {
+                const computed = getComputedStyle(node);
+                return {
+                    writingMode: computed.writingMode,
+                    textOrientation: computed.textOrientation,
+                    fontSize: Number.parseFloat(computed.fontSize),
+                };
+            }),
+        );
+        for (const style of styles) {
+            expect(style.writingMode).toBe('vertical-rl');
+            expect(style.textOrientation).toBe('upright');
+            expect(style.fontSize).toBeGreaterThanOrEqual(20);
+        }
+
+        const boxRect = await textBox.evaluate((node) => {
+            const r = node.getBoundingClientRect();
+            return { x: r.x, y: r.y, width: r.width, height: r.height };
+        });
+        for (const rect of columnRects) {
+            expect(rect.width).toBeGreaterThan(0);
+            expect(rect.height).toBeGreaterThan(0);
+            expect(rect.x).toBeGreaterThanOrEqual(boxRect.x - 0.5);
+            expect(rect.x + rect.width).toBeLessThanOrEqual(boxRect.x + boxRect.width + 0.5);
+            expect(rect.y).toBeGreaterThanOrEqual(boxRect.y - 0.5);
+            expect(rect.y + rect.height).toBeLessThanOrEqual(boxRect.y + boxRect.height + 0.5);
+        }
+
+        const overflow = await pageLocator
+            .locator('[data-ocr-text]')
+            .first()
+            .evaluate((node) => {
+                const computed = getComputedStyle(node);
+                return {
+                    scrollWidth: node.scrollWidth,
+                    clientWidth: node.clientWidth,
+                    scrollHeight: node.scrollHeight,
+                    clientHeight: node.clientHeight,
+                    overflowX: computed.overflowX,
+                    overflowY: computed.overflowY,
+                };
+            });
+        // The text box clips to the OCR box when not hovered; the columns
+        // themselves must not need internal scrollbars (allowing 1px for
+        // browser subpixel rounding).
+        expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
+        expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight + 1);
+
+        const columnOverflows = await pageLocator.locator('[data-ocr-column]').evaluateAll((nodes) =>
+            nodes.map((node) => ({
+                scrollWidth: node.scrollWidth,
+                clientWidth: node.clientWidth,
+                scrollHeight: node.scrollHeight,
+                clientHeight: node.clientHeight,
+            })),
+        );
+        for (const o of columnOverflows) {
+            expect(o.scrollWidth).toBeLessThanOrEqual(o.clientWidth + 1);
+            expect(o.scrollHeight).toBeLessThanOrEqual(o.clientHeight + 1);
+        }
+    });
+
+    test('AI learning panel uses an explicit readable Japanese font size and a body1 response font size', async ({
+        page,
+    }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => window.__OCR_TEST__ !== undefined);
+        await page.evaluate(() => {
+            window.__OCR_TEST__!.setEnabled(true);
+            window.__OCR_TEST__!.setAiEnabled(true);
+            window.__OCR_TEST__!.setVisible(true);
+        });
+        await waitForHarness(page);
+
+        const textBox = page.locator('[data-ocr-text]').first();
+        await textBox.hover();
+        const toolbar = page.getByTestId('ocr-learning-toolbar').first();
+        await expect(toolbar).toBeVisible();
+        await toolbar.getByRole('button', { name: 'Learn' }).click();
+        const panel = page.getByRole('complementary', { name: 'AI learning panel' });
+        await expect(panel).toBeVisible();
+        await expect(panel.getByText('Respuesta translate')).toBeVisible();
+
+        const japaneseFontSize = await panel
+            .locator('p[lang="ja"]')
+            .first()
+            .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+        expect(japaneseFontSize).toBeGreaterThanOrEqual(18);
+
+        const responseFontSize = await panel
+            .locator('section')
+            .first()
+            .locator('p')
+            .first()
+            .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+        expect(responseFontSize).toBeGreaterThanOrEqual(16);
+
+        const responseLabelFontSize = await panel
+            .locator('section')
+            .first()
+            .locator('h2, h3, h4, h5, h6, [class*="MuiTypography-subtitle"]')
+            .first()
+            .evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+        expect(responseLabelFontSize).toBeGreaterThanOrEqual(14);
+    });
 });

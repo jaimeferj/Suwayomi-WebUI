@@ -113,31 +113,38 @@ const OcrTextBoxBase = ({
             data-ocr-columns={layout.columnCount}
             data-ocr-side-margin={layout.sideMargin}
             data-ocr-column-gap={layout.columnGap}
+            data-ocr-font-size={layout.fontSize}
+            data-ocr-line-box-width={layout.lineBoxWidth ?? layout.fontSize}
+            data-ocr-line-box-height={layout.lineBoxHeight ?? layout.fontSize}
             data-reader-interactive="true"
         >
-            {columns.map((col, idx) => (
-                <Box
-                    key={columnKeys[idx] ?? col.text}
-                    sx={{
-                        writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
-                        textOrientation: 'upright',
-                        fontSize: `${layout.fontSize}px`,
-                        lineHeight: 1,
-                        whiteSpace: 'pre',
-                        width: isVertical ? `${layout.fontSize}px` : 'auto',
-                        height: isVertical ? '100%' : 'auto',
-                        flexShrink: 0,
-                        flexGrow: 0,
-                        flexBasis: 'auto',
-                        display: 'inline-block',
-                        overflow: 'hidden',
-                    }}
-                    data-ocr-column=""
-                    data-ocr-column-text={col.text}
-                >
-                    {col.text}
-                </Box>
-            ))}
+            {columns.map((col, idx) => {
+                const columnWidth = isVertical ? (layout.lineBoxWidth ?? layout.fontSize) : undefined;
+                const columnLineHeight = isVertical ? (layout.lineBoxHeight ?? layout.fontSize) : undefined;
+                return (
+                    <Box
+                        key={columnKeys[idx] ?? col.text}
+                        sx={{
+                            writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
+                            textOrientation: 'upright',
+                            fontSize: `${layout.fontSize}px`,
+                            lineHeight: columnLineHeight ? `${columnLineHeight}px` : 1,
+                            whiteSpace: 'pre',
+                            width: isVertical ? `${columnWidth}px` : 'auto',
+                            height: isVertical ? '100%' : 'auto',
+                            flexShrink: 0,
+                            flexGrow: 0,
+                            flexBasis: 'auto',
+                            display: 'inline-block',
+                            overflow: 'hidden',
+                        }}
+                        data-ocr-column=""
+                        data-ocr-column-text={col.text}
+                    >
+                        {col.text}
+                    </Box>
+                );
+            })}
             {hovered && (
                 <Paper
                     elevation={8}
