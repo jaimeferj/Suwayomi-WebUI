@@ -18,22 +18,32 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useLingui } from '@lingui/react/macro';
 import { useOcrStore } from '@/features/ocr/OcrStore';
-import type { AiExplainResponse } from '@/features/ocr/AiApi';
+import type { AiLearningAction, AiLearnResponse, AiLearningContext } from '@/features/ocr/AiApi';
 
 export interface AiExplainDialogProps {
     open: boolean;
     text: string;
+    action: AiLearningAction;
+    context?: AiLearningContext;
     onClose: () => void;
 }
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
-export const AiExplainDialog = ({ open, text, onClose }: AiExplainDialogProps) => {
+const TITLES: Record<AiLearningAction, string> = {
+    translate: 'Translate',
+    grammar: 'Grammar',
+    vocabulary: 'Vocabulary',
+    tone: 'Tone / Speech',
+    cards: 'Cards',
+};
+
+export const AiExplainDialog = ({ open, text, action, context, onClose }: AiExplainDialogProps) => {
     const { t } = useLingui();
     const settings = useOcrStore((state) => state.settings);
     const aiApi = useOcrStore((state) => state.aiApi);
     const [status, setStatus] = useState<Status>('idle');
-    const [response, setResponse] = useState<AiExplainResponse | null>(null);
+    const [response, setResponse] = useState<AiLearnResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -45,9 +55,10 @@ export const AiExplainDialog = ({ open, text, onClose }: AiExplainDialogProps) =
         setError(null);
         setResponse(null);
         aiApi
-            .explain({
-                text,
-                language: settings.language,
+            .learn({
+                sentence: text,
+                action,
+                context,
                 level: settings.aiLevel,
             })
             .then((result) => {
@@ -67,11 +78,11 @@ export const AiExplainDialog = ({ open, text, onClose }: AiExplainDialogProps) =
         return () => {
             cancelled = true;
         };
-    }, [open, text, settings.aiEnabled, settings.language, settings.aiLevel, aiApi]);
+    }, [open, text, action, context, settings.aiEnabled, settings.aiLevel, aiApi]);
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-            <DialogTitle>{t`AI explanation`}</DialogTitle>
+            <DialogTitle>{TITLES[action]}</DialogTitle>
             <DialogContent>
                 <Stack sx={{ gap: 2, mt: 1 }}>
                     <Typography variant="body2" color="text.secondary">
@@ -88,35 +99,16 @@ export const AiExplainDialog = ({ open, text, onClose }: AiExplainDialogProps) =
                         </Typography>
                     )}
                     {status === 'ready' && response && (
-                        <Box>
-                            <Typography variant="subtitle2">{t`Explanation`}</Typography>
-                            <Typography sx={{ whiteSpace: 'pre-wrap' }}>{response.explanation}</Typography>
-                            {response.vocab.length > 0 && (
-                                <>
-                                    <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                                        {t`Vocabulary`}
+                        <Stack sx={{ gap: 2 }}>
+                            {response.sections.map((section) => (
+                                <Box key={`${section.label}-${section.content}`}>
+                                    <Typography variant="subtitle2">{section.label}</Typography>
+                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                        {section.content}
                                     </Typography>
-                                    {response.vocab.map((entry) => (
-                                        <Typography key={`${entry.term}-${entry.reading}`} variant="body2">
-                                            <strong>{entry.term}</strong>
-                                            {entry.reading ? ` (${entry.reading})` : ''} — {entry.meaning}
-                                        </Typography>
-                                    ))}
-                                </>
-                            )}
-                            {response.grammar.length > 0 && (
-                                <>
-                                    <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                                        {t`Grammar`}
-                                    </Typography>
-                                    {response.grammar.map((point) => (
-                                        <Typography key={`g-${point.slice(0, 32)}`} variant="body2">
-                                            • {point}
-                                        </Typography>
-                                    ))}
-                                </>
-                            )}
-                        </Box>
+                                </Box>
+                            ))}
+                        </Stack>
                     )}
                     {!settings.aiEnabled && (
                         <Typography color="warning.main" variant="body2">

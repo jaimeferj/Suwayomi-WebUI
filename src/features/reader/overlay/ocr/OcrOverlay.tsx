@@ -16,6 +16,7 @@ import { AiExplainDialog } from '@/features/ocr/AiExplainDialog.tsx';
 import { useOcrStore, pageKey } from '@/features/ocr/OcrStore.ts';
 import { bboxKey } from '@/features/ocr/BBox.utils.ts';
 import type { OcrLine } from '@/features/ocr/Ocr.types.ts';
+import type { AiLearningAction, AiLearningContext } from '@/features/ocr/AiApi.ts';
 
 export interface OcrOverlayProps {
     mangaId?: string;
@@ -49,7 +50,11 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
     const chapterTitle = currentChapter?.name;
 
     const [ankiLine, setAnkiLine] = useState<OcrLine | null>(null);
-    const [explainLine, setExplainLine] = useState<OcrLine | null>(null);
+    const [learningRequest, setLearningRequest] = useState<{
+        line: OcrLine;
+        action: AiLearningAction;
+        context: AiLearningContext;
+    } | null>(null);
 
     useEffect(() => {
         if (!fetchEnabled) {
@@ -96,7 +101,7 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
     ]);
 
     const handleAnkiClose = useCallback(() => setAnkiLine(null), []);
-    const handleExplainClose = useCallback(() => setExplainLine(null), []);
+    const handleExplainClose = useCallback(() => setLearningRequest(null), []);
 
     if (!overlayActive) {
         return (
@@ -109,7 +114,7 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
                     chapterTitle={chapterTitle}
                     pageIndex={pageIndex}
                 />
-                <AiExplainDialog open={false} text="" onClose={handleExplainClose} />
+                <AiExplainDialog open={false} text="" action="translate" onClose={handleExplainClose} />
             </>
         );
     }
@@ -137,7 +142,7 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
                 data-ocr-overlay=""
                 data-in-viewport={inViewport ? 'true' : 'false'}
             >
-                {(lines ?? []).map((line) => (
+                {(lines ?? []).map((line, lineIndex, pageLines) => (
                     <OcrTextBox
                         key={`${key}-${bboxKey(line.tightBoundingBox)}`}
                         line={line}
@@ -147,7 +152,19 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
                         ankiEnabled={settings.ankiEnabled}
                         aiEnabled={settings.aiEnabled}
                         onCreateAnkiCard={settings.ankiEnabled ? () => setAnkiLine(line) : undefined}
-                        onExplain={settings.aiEnabled ? () => setExplainLine(line) : undefined}
+                        onLearn={
+                            settings.aiEnabled
+                                ? (action) =>
+                                      setLearningRequest({
+                                          line,
+                                          action,
+                                          context: {
+                                              previous_line: pageLines[lineIndex - 1]?.text,
+                                              next_line: pageLines[lineIndex + 1]?.text,
+                                          },
+                                      })
+                                : undefined
+                        }
                     />
                 ))}
                 {pageState?.status === 'loading' && (
@@ -169,7 +186,13 @@ const OcrOverlayBase = ({ mangaId, chapterId, pageIndex, pageUrl, imageRef, inVi
                 chapterTitle={chapterTitle}
                 pageIndex={pageIndex}
             />
-            <AiExplainDialog open={explainLine !== null} text={explainLine?.text ?? ''} onClose={handleExplainClose} />
+            <AiExplainDialog
+                open={learningRequest !== null}
+                text={learningRequest?.line.text ?? ''}
+                action={learningRequest?.action ?? 'translate'}
+                context={learningRequest?.context}
+                onClose={handleExplainClose}
+            />
         </>
     );
 };

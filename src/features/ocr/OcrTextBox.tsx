@@ -12,6 +12,7 @@ import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import type { OcrLine } from '@/features/ocr/Ocr.types';
+import type { AiLearningAction } from '@/features/ocr/AiApi';
 import { getOcrTextLayout } from '@/features/ocr/OcrLayout';
 
 export interface OcrTextBoxProps {
@@ -22,7 +23,7 @@ export interface OcrTextBoxProps {
     ankiEnabled: boolean;
     aiEnabled: boolean;
     onCreateAnkiCard?: () => void;
-    onExplain?: () => void;
+    onLearn?: (action: AiLearningAction) => void;
 }
 
 const OcrTextBoxBase = ({
@@ -33,7 +34,7 @@ const OcrTextBoxBase = ({
     ankiEnabled,
     aiEnabled,
     onCreateAnkiCard,
-    onExplain,
+    onLearn,
 }: OcrTextBoxProps) => {
     const [hovered, setHovered] = useState(false);
     const revealed = showOnHover ? hovered : true;
@@ -75,7 +76,7 @@ const OcrTextBoxBase = ({
                     backgroundColor: revealed ? 'rgba(0,0,0,0.6)' : 'transparent',
                     border: revealed ? '1px solid rgba(255,255,255,0.4)' : '1px solid transparent',
                     pointerEvents: 'auto',
-                    overflow: 'hidden',
+                    overflow: hovered ? 'visible' : 'hidden',
                     display: 'flex',
                     flexDirection: isVertical ? 'row-reverse' : 'column',
                     alignItems: isVertical ? 'stretch' : 'center',
@@ -133,9 +134,23 @@ const OcrTextBoxBase = ({
                             </Button>
                         )}
                         {aiEnabled && (
-                            <Button onClick={onExplain} disabled={!onExplain}>
-                                Explain
-                            </Button>
+                            <>
+                                <Button onClick={() => onLearn?.('translate')} disabled={!onLearn}>
+                                    Translate
+                                </Button>
+                                <Button onClick={() => onLearn?.('grammar')} disabled={!onLearn}>
+                                    Grammar
+                                </Button>
+                                <Button onClick={() => onLearn?.('vocabulary')} disabled={!onLearn}>
+                                    Vocab
+                                </Button>
+                                <Button onClick={() => onLearn?.('tone')} disabled={!onLearn}>
+                                    Tone
+                                </Button>
+                                <Button onClick={() => onLearn?.('cards')} disabled={!onLearn}>
+                                    Cards
+                                </Button>
+                            </>
                         )}
                     </ButtonGroup>
                 )}

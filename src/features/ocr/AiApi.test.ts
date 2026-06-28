@@ -50,6 +50,33 @@ describe('AiApi', () => {
         expect(JSON.parse(init?.body as string)).toEqual({ text: 'こんにちは', language: 'ja' });
     });
 
+    it('posts a focused learning action and context to /ai/learn', async () => {
+        const payload = {
+            provider: 'openai',
+            action: 'grammar' as const,
+            sentence: '行かなきゃ。',
+            sections: [{ label: 'Estructura', content: '行く + なきゃ' }],
+        };
+        fetchMock.mockResolvedValueOnce(jsonResponse(200, payload));
+
+        const api = new AiApi({ endpoint: 'http://localhost:8765' });
+        const response = await api.learn({
+            sentence: '行かなきゃ。',
+            action: 'grammar',
+            context: { previous_line: 'もう遅いよ。' },
+        });
+
+        expect(response).toEqual(payload);
+        const [firstCall] = fetchMock.mock.calls;
+        const [url, init] = firstCall;
+        expect(url).toBe('http://localhost:8765/ai/learn');
+        expect(JSON.parse(init?.body as string)).toEqual({
+            sentence: '行かなきゃ。',
+            action: 'grammar',
+            context: { previous_line: 'もう遅いよ。' },
+        });
+    });
+
     it('surfaces server errors as AiApiError', async () => {
         fetchMock.mockResolvedValueOnce(jsonResponse(503, { detail: 'ai disabled' }));
 

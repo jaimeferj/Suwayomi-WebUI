@@ -21,6 +21,29 @@ export interface AiExplainResponse {
     grammar: string[];
 }
 
+export type AiLearningAction = 'translate' | 'grammar' | 'vocabulary' | 'tone' | 'cards';
+
+export interface AiLearningContext {
+    previous_line?: string;
+    next_line?: string;
+    speaker?: string;
+    scene?: string;
+}
+
+export interface AiLearnRequest {
+    sentence: string;
+    action: AiLearningAction;
+    context?: AiLearningContext;
+    level?: string;
+}
+
+export interface AiLearnResponse {
+    provider: string;
+    action: AiLearningAction;
+    sentence: string;
+    sections: Array<{ label: string; content: string }>;
+}
+
 export interface AiCardFieldsRequest {
     text: string;
     language?: string;
@@ -60,6 +83,13 @@ export class AiApi {
 
     async explain(payload: AiExplainRequest): Promise<AiExplainResponse> {
         return this.request<AiExplainResponse>('/ai/explain', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async learn(payload: AiLearnRequest): Promise<AiLearnResponse> {
+        return this.request<AiLearnResponse>('/ai/learn', {
             method: 'POST',
             body: JSON.stringify(payload),
         });
