@@ -417,12 +417,16 @@ msgid "AI"
 msgstr "AI"
 
 #: src/features/ocr/AiExplainDialog.tsx
-msgid "AI explanation"
-msgstr "AI explanation"
-
-#: src/features/ocr/AiExplainDialog.tsx
 msgid "AI is disabled. Configure it in the OCR settings panel."
 msgstr "AI is disabled. Configure it in the OCR settings panel."
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "AI learning"
+msgstr "AI learning"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "AI learning panel"
+msgstr "AI learning panel"
 
 #: src/features/ocr/AiExplainDialog.tsx
 msgid "AI request failed"
@@ -902,7 +906,6 @@ msgstr "Client data"
 #: src/base/components/feedback/SnackbarWithDescription.tsx
 #: src/features/app-updates/components/VersionUpdateInfoDialog.tsx
 #: src/features/migration/components/migration-entry/MigrationDestinationEntry.tsx
-#: src/features/ocr/AiExplainDialog.tsx
 #: src/features/ocr/OcrSettingsDialog.tsx
 msgid "Close"
 msgstr "Close"
@@ -910,6 +913,10 @@ msgstr "Close"
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Cloudflare bypass"
 msgstr "Cloudflare bypass"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Collapse AI learning panel"
+msgstr "Collapse AI learning panel"
 
 #: src/features/reader/filters/settings/components/ReaderSettingRGBA.tsx
 msgid "Color filter blend mode"
@@ -1658,10 +1665,6 @@ msgstr "Exit to manga page"
 msgid "Exit to previous page"
 msgstr "Exit to previous page"
 
-#: src/features/ocr/AiExplainDialog.tsx
-msgid "Explanation"
-msgstr "Explanation"
-
 #: src/features/ocr/OcrSettingsDialog.tsx
 msgid "Expression field"
 msgstr "Expression field"
@@ -1864,10 +1867,6 @@ msgstr "Global update"
 #: src/features/updates/components/UpdateChecker.tsx
 msgid "Global update (last update: {date})"
 msgstr "Global update (last update: {date})"
-
-#: src/features/ocr/AiExplainDialog.tsx
-msgid "Grammar"
-msgstr "Grammar"
 
 #: src/features/reader/settings/general/components/ReaderSettingBackgroundColor.tsx
 msgid "Gray"
@@ -2232,6 +2231,10 @@ msgstr "Lavender"
 msgid "Layout"
 msgstr "Layout"
 
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Learning mode"
+msgstr "Learning mode"
+
 #: src/features/reader/overlay/progress-bar/settings/components/ReaderSettingProgressBarPosition.tsx
 #: src/features/reader/settings/general/components/ReaderSettingSafeAreaInset.tsx
 msgid "Left"
@@ -2294,6 +2297,10 @@ msgstr "Links"
 #: src/features/library/components/LibraryOptionsPanel.tsx
 msgid "List"
 msgstr "List"
+
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Loading AI explanation"
+msgstr "Loading AI explanation"
 
 #: src/features/theme/components/ThemePreview.tsx
 msgid "Loading theme fonts…"
@@ -3074,6 +3081,10 @@ msgstr "Reset to Default"
 msgid "Reset to defaults"
 msgstr "Reset to defaults"
 
+#: src/features/ocr/AiExplainDialog.tsx
+msgid "Resize AI learning panel"
+msgstr "Resize AI learning panel"
+
 #: src/features/settings/screens/ServerSettings.tsx
 msgid "Response fallback"
 msgstr "Response fallback"
@@ -3099,6 +3110,7 @@ msgstr "Resume"
 #: src/features/chapter/components/buttons/ChapterDownloadRetryButton.tsx
 #: src/features/manga/hooks/useManageMangaLibraryState.tsx
 #: src/features/migration/components/migration-entry/MigrationDestinationEntry.tsx
+#: src/features/ocr/AiExplainDialog.tsx
 msgid "Retry"
 msgstr "Retry"
 
@@ -4094,10 +4106,6 @@ msgstr "Version"
 #: src/features/reader/settings/layout/components/ReaderSettingTapZoneInvertMode.tsx
 msgid "Vertical"
 msgstr "Vertical"
-
-#: src/features/ocr/AiExplainDialog.tsx
-msgid "Vocabulary"
-msgstr "Vocabulary"
 
 #: src/features/settings/Settings.constants.ts
 msgid "VUI"
