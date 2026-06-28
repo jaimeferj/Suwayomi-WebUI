@@ -182,9 +182,6 @@ describe('getOcrTextLayout', () => {
         const strippedOriginal = regressionText.replaceAll(/\s+/g, '');
         expect(reconstructed.replaceAll(/\s+/g, '')).toBe(strippedOriginal);
 
-        expect(layout.fontSize).toBeGreaterThanOrEqual(20);
-        expect(layout.fontSize).toBeLessThanOrEqual(28);
-
         expect(Number.isFinite(layout.fontSize)).toBe(true);
         expect(Number.isFinite(layout.columnGap)).toBe(true);
         expect(Number.isFinite(layout.sideMargin)).toBe(true);
@@ -192,15 +189,63 @@ describe('getOcrTextLayout', () => {
         expect(layout.columnGap).toBeGreaterThanOrEqual(0);
         expect(layout.sideMargin).toBeGreaterThanOrEqual(0);
 
+        // Fill-derived font size: largest g ≤ blockFontSize such that
+        //   longestColumnGlyphs × lineBoxHeight ≤ boxHeight + 0.5  AND
+        //   columnCount × lineBoxWidth + (columnCount − 1) × columnGap + 2 × sideMargin ≤ boxWidth
+        // For 200×240 / C=8 / L=3 / blockFontSize=28 / columnGap=4 / sideMargin=2:
+        //   g_height  = 240 / (3 × 1.2) = 66.67, capped to 28.
+        //   width budget: 8 × lineBoxWidth + 7 × 4 + 2 × 2 ≤ 200 → lineBoxWidth ≤ 21.
+        //   g=20: lineBoxWidth=21 (20×1.05), 8×21+32=200 ✓.
+        //   g=20.5: lineBoxWidth=21.5, 8×21.5+32=204 ✗.
+        //   → fontSize=20, lineBoxHeight=24 (20×1.2).
+        expect(layout.fontSize).toBeCloseTo(20, 1);
+        expect(layout.fontSize).toBeLessThanOrEqual(28);
+        expect(layout.lineBoxWidth).toBeCloseTo(20 * 1.05, 1);
+        expect(layout.lineBoxHeight).toBeCloseTo(20 * 1.2, 1);
+
         const columnWidth = layout.lineBoxWidth ?? layout.fontSize;
         const longestColumn = Math.max(...(layout.columns ?? []).map((col) => [...col.text].length));
         const fittedWidth =
             layout.columnCount * columnWidth + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
         expect(fittedWidth).toBeLessThanOrEqual(200);
         const fittedHeight = longestColumn * (layout.lineBoxHeight ?? layout.fontSize);
-        expect(fittedHeight).toBeLessThanOrEqual(240);
+        // Fill invariant: lineBoxHeight × longestColumn ≤ box.height (up to one
+        // 0.5-px quantisation quantum). With g=20 and 3 glyphs: 3 × 24 = 72 ≤ 240.5.
+        expect(fittedHeight).toBeLessThanOrEqual(240 + 0.5);
 
         expect(layout.lineBoxWidth).toBeGreaterThan(0);
         expect(layout.lineBoxHeight).toBeGreaterThan(0);
+    });
+
+    it('fills the box height for the 2-column 王は/誰だ？ case (fill-derived font size)', () => {
+        const layout = getOcrTextLayout({
+            text: '王は 誰だ？',
+            box: { width: 80, height: 160 },
+            forcedOrientation: 'vertical',
+            sourceLines: ['王は', '誰だ？'],
+        });
+
+        expect(layout.orientation).toBe('vertical');
+        expect(layout.columnCount).toBe(2);
+        expect(layout.columns?.map((col) => col.text)).toEqual(['王は', '誰だ？']);
+
+        const longestColumn = Math.max(...(layout.columns ?? []).map((col) => [...col.text].length));
+        // Fill invariant: lineBoxHeight × longestColumn ≤ box.height (up to one
+        // 0.5-px quantisation quantum). 3 × 41.5 = 124.5 ≤ 160.5.
+        expect(longestColumn * (layout.lineBoxHeight ?? layout.fontSize)).toBeLessThanOrEqual(160 + 0.5);
+
+        const columnWidth = layout.lineBoxWidth ?? layout.fontSize;
+        const fittedWidth =
+            layout.columnCount * columnWidth + (layout.columnCount - 1) * layout.columnGap + 2 * layout.sideMargin;
+        expect(fittedWidth).toBeLessThanOrEqual(80);
+        // No blockFontSize cap, so fontSize is the largest g where both
+        // constraints hold. Width budget: 2 × lineBoxWidth + 1 × 4 + 2 × 2 ≤ 80,
+        // so lineBoxWidth ≤ 36 → g × 1.05 ≤ 36 → g ≤ 34.29; quantised to 34.5
+        // (lineBoxWidth=36) still fits: 2 × 36 + 8 = 80 ≤ 80. The height-fill
+        // target 160 / (3 × 1.2) = 44.44 is wider than the width budget, so
+        // the width constraint is the binding one and the fill is ~78 % by
+        // height / 100 % by width.
+        expect(layout.fontSize).toBeCloseTo(34.5, 1);
+        expect(layout.lineBoxHeight).toBeCloseTo(41.5, 1);
     });
 });
