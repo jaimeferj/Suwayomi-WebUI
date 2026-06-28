@@ -213,21 +213,34 @@ function computeVerticalLayout(
     // horizontal ratio so vertical Japanese glyphs don't kiss the gap/inset.
     const lineBoxWidthRatio = columnsCount > 1 ? COLUMN_LINE_BOX_WIDTH_RATIO : 1;
     const lineBoxHeightRatio = columnsCount > 1 ? COLUMN_LINE_BOX_HEIGHT_RATIO : 1;
-    const availableWidth =
-        columnsCount > 1 ? box.width - 2 * targetSideMargin - (columnsCount - 1) * targetGap : box.width;
-    const byWidth = availableWidth / Math.max(columnsCount * lineBoxWidthRatio, lineBoxWidthRatio);
-    const byHeight = box.height / Math.max(maxColumnLength * lineBoxHeightRatio, lineBoxHeightRatio);
 
-    let fontSize = Math.min(byWidth, byHeight);
-    fontSize = Math.max(MIN_FONT_SIZE, fontSize);
+    // Height-fill-first selection. Pick the largest font size that simultaneously:
+    //   1. fills the box height (lineBoxHeight × longestColumnGlyphs ≤ H, up to one
+    //      0.5-px quantisation quantum), and
+    //   2. fits the box width (C × lineBoxWidth + (C−1) × columnGap + 2 × sideMargin
+    //      ≤ W), with the line-box width computed from the *quantised* font size
+    //      so we never ship a subpixel-fit that overflows after rounding.
+    // This makes the per-column `lineBoxHeight` the *largest* advance that fits the
+    // box, so the longest column visually fills the OCR box as much as the box
+    // width and the supplied `blockFontSize` permit. When the width budget is the
+    // binding constraint we walk down in 0.5-px steps; the height invariant
+    // `lineBoxHeight × L ≤ H` is preserved at every candidate.
+    const gHeightRaw = box.height / Math.max(maxColumnLength * lineBoxHeightRatio, lineBoxHeightRatio);
+    const gHeightCeiling =
+        typeof blockFontSize === 'number' && blockFontSize > 0 ? Math.min(blockFontSize, gHeightRaw) : gHeightRaw;
 
-    if (typeof blockFontSize === 'number' && blockFontSize > 0) {
-        fontSize = Math.min(blockFontSize, fontSize);
-    }
-
-    fontSize = quantize(fontSize);
+    let fontSize = quantize(gHeightCeiling);
     if (fontSize < MIN_FONT_SIZE) {
         fontSize = MIN_FONT_SIZE;
+    }
+
+    // Walk down in 0.5-px steps until the quantised width budget fits.
+    const widthFits = (candidate: number): boolean => {
+        const lbw = quantize(candidate * lineBoxWidthRatio);
+        return columnsCount * lbw + (columnsCount - 1) * targetGap + 2 * targetSideMargin <= box.width;
+    };
+    while (fontSize > MIN_FONT_SIZE && !widthFits(fontSize)) {
+        fontSize -= METRIC_QUANTUM_PX;
     }
 
     const lineBoxWidth = quantize(fontSize * COLUMN_LINE_BOX_WIDTH_RATIO);

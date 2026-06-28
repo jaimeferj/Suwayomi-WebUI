@@ -444,6 +444,20 @@ test.describe('OCR overlay in front of manga reader UI', () => {
         }
         expect(columnRects[0].x).toBeGreaterThan(columnRects[columnRects.length - 1].x);
 
+        const dataFontSize = Number.parseFloat((await textBox.getAttribute('data-ocr-font-size')) ?? '0');
+        const dataLineBoxHeight = Number.parseFloat((await textBox.getAttribute('data-ocr-line-box-height')) ?? '0');
+        const dataLineBoxWidth = Number.parseFloat((await textBox.getAttribute('data-ocr-line-box-width')) ?? '0');
+        const dataSideMargin = Number.parseFloat((await textBox.getAttribute('data-ocr-side-margin')) ?? '0');
+        const dataColumnGap = Number.parseFloat((await textBox.getAttribute('data-ocr-column-gap')) ?? '0');
+        // Fill-derived font size: 200×240 / 8 cols / L=3 / blockFontSize=28
+        // gives fontSize=20, lineBoxHeight=24, lineBoxWidth=21.
+        expect(dataFontSize).toBeCloseTo(20, 1);
+        expect(dataLineBoxHeight).toBeCloseTo(24, 1);
+        expect(dataLineBoxWidth).toBeCloseTo(21, 1);
+        expect(dataFontSize).toBeLessThanOrEqual(28);
+        expect(dataColumnGap).toBeGreaterThan(0);
+        expect(dataSideMargin).toBeGreaterThanOrEqual(0);
+
         const styles = await pageLocator.locator('[data-ocr-column]').evaluateAll((nodes) =>
             nodes.map((node) => {
                 const computed = getComputedStyle(node);
@@ -451,13 +465,17 @@ test.describe('OCR overlay in front of manga reader UI', () => {
                     writingMode: computed.writingMode,
                     textOrientation: computed.textOrientation,
                     fontSize: Number.parseFloat(computed.fontSize),
+                    lineHeightPx: Number.parseFloat(computed.lineHeight) || 0,
                 };
             }),
         );
         for (const style of styles) {
             expect(style.writingMode).toBe('vertical-rl');
             expect(style.textOrientation).toBe('upright');
-            expect(style.fontSize).toBeGreaterThanOrEqual(20);
+            // The per-column computed style must match the data attribute so
+            // the fill-derived metrics flow into the rendered DOM.
+            expect(style.fontSize).toBeCloseTo(dataFontSize, 1);
+            expect(style.lineHeightPx).toBeCloseTo(dataLineBoxHeight, 0);
         }
 
         const boxRect = await textBox.evaluate((node) => {
@@ -472,6 +490,24 @@ test.describe('OCR overlay in front of manga reader UI', () => {
             expect(rect.y).toBeGreaterThanOrEqual(boxRect.y - 0.5);
             expect(rect.y + rect.height).toBeLessThanOrEqual(boxRect.y + boxRect.height + 0.5);
         }
+
+        // Rendered-DOM width-fit invariant: sum of column widths + gaps + 2 ×
+        // side margin must not exceed the OCR box width. The fill-derived
+        // font size for the 8-column case leaves no headroom, so this pins
+        // the formula against any future regression that lets the columns
+        // overflow the OCR box at the rendered level.
+        const totalColumnWidth = columnRects.reduce((acc, rect) => acc + rect.width, 0);
+        const expectedGapsWidth = (columnRects.length - 1) * dataColumnGap;
+        const expectedWidth = totalColumnWidth + expectedGapsWidth + 2 * dataSideMargin;
+        expect(expectedWidth).toBeLessThanOrEqual(boxRect.width + 0.5);
+
+        // Box-fill invariant: every column visually fills the OCR box height
+        // (the renderer sets `height: 100%` on each column), so the longest
+        // column's rendered height must equal the box's interior height
+        // (allowing 1 px for subpixel rounding).
+        const longestColumnRect = columnRects.reduce((acc, rect) => (rect.height > acc.height ? rect : acc));
+        expect(longestColumnRect.height).toBeGreaterThanOrEqual(boxRect.height - 2 * dataSideMargin - 1);
+        expect(longestColumnRect.height).toBeLessThanOrEqual(boxRect.height + 1);
 
         const overflow = await pageLocator
             .locator('[data-ocr-text]')
