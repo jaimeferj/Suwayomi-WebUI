@@ -231,7 +231,7 @@ export const AiExplainDialog = ({ open, text, action, context, onActionChange, o
                     </Stack>
                     <Stack sx={{ gap: 2, p: 2, overflowY: 'auto' }}>
                         <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'action.hover' }}>
-                            <Typography lang="ja" sx={{ lineHeight: 1.7 }}>
+                            <Typography lang="ja" sx={{ lineHeight: 1.7, fontSize: '18px' }}>
                                 {text}
                             </Typography>
                         </Paper>
@@ -309,10 +309,10 @@ export const AiExplainDialog = ({ open, text, action, context, onActionChange, o
                                         variant="outlined"
                                         sx={{ p: 2 }}
                                     >
-                                        <Typography variant="subtitle2" color="primary.main" sx={{ mb: 0.75 }}>
+                                        <Typography variant="subtitle1" color="primary.main" sx={{ mb: 0.75 }}>
                                             {section.label}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                        <Typography variant="body1" sx={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                                             {section.content}
                                         </Typography>
                                     </Paper>
